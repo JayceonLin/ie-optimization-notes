@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 2 課：線性規劃與圖解法｜工工最佳化講義</title>
+  <meta name="description" content="用 Wyndor 玻璃公司的例子畫出可行解區域，看懂為什麼最佳解一定落在頂點上。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="02-linear-programming">
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>說出線性規劃的四個基本假設，並寫出標準形式。</li>
+        <li>用圖解法求出兩個變數的線性規劃最佳解。</li>
+        <li>用角點定理解釋為什麼只需要檢查頂點。</li>
+        <li>用 Python 的 PuLP 套件求解線性規劃。</li>
+      </ul>
+    </section>
+
+    <section id="standard-form">
+      <h2>線性規劃的假設與標準形式</h2>
+      <p>線性規劃（linear programming，LP）是目標函數與限制式都是線性的最佳化模型。把真實問題寫成 LP 之前，要先確認它大致符合四個假設：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">假設</th><th scope="col">意思</th><th scope="col">什麼時候不成立</th></tr></thead>
+          <tbody>
+            <tr><td>比例性（proportionality）</td><td>產量加倍，利潤與資源用量也加倍</td><td>大量採購有折扣、有固定的開機成本</td></tr>
+            <tr><td>可加性（additivity）</td><td>總量等於各產品分別貢獻的總和</td><td>兩種產品一起做會互相干擾或互補</td></tr>
+            <tr><td>可分割性（divisibility）</td><td>變數可以是小數</td><td>機器台數、人數必須是整數</td></tr>
+            <tr><td>確定性（certainty）</td><td>所有參數都是已知常數</td><td>需求、處理時間有不確定性</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>本講義把最大化、限制式全部是「$\le$」且變數非負的模型稱為<strong>標準形式</strong>：</p>
+      <div class="model">
+        $$\begin{aligned}
+        \max \quad & Z = \sum_{j=1}^{n} c_j x_j \\
+        \text{s.t.} \quad & \sum_{j=1}^{n} a_{ij} x_j \le b_i, \quad i = 1, \dots, m \\
+        & x_j \ge 0, \quad j = 1, \dots, n
+        \end{aligned}$$
+      </div>
+      <p>用矩陣寫更精簡：$\max\ Z = \mathbf{c}^{\mathsf{T}}\mathbf{x}$，s.t. $A\mathbf{x} \le \mathbf{b}$，$\mathbf{x} \ge \mathbf{0}$。其中 $c_j$ 是單位利潤，$a_{ij}$ 是第 $j$ 個活動每單位用掉第 $i$ 種資源的量，$b_i$ 是第 $i$ 種資源的可用量。</p>
+    </section>
+
+    <section id="example">
+      <h2>例題：Wyndor 玻璃公司</h2>
+      <div class="example">
+        <p class="box-title">例題 2-1：Wyndor 玻璃公司的產品組合</p>
+        <p>Wyndor 玻璃公司打算推出兩種新產品：產品 1 是鋁框玻璃門，產品 2 是木框窗戶。工廠 1 做鋁框、工廠 2 做木框、工廠 3 負責玻璃與組裝。每批產品需要的工時、各工廠每週剩餘的可用工時與每批利潤如下表。每週各生產幾批，利潤最高？</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col"></th><th scope="col">產品 1（小時／批）</th><th scope="col">產品 2（小時／批）</th><th scope="col">每週可用（小時）</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">工廠 1</th><td>1</td><td>0</td><td>4</td></tr>
+              <tr><th scope="row">工廠 2</th><td>0</td><td>2</td><td>12</td></tr>
+              <tr><th scope="row">工廠 3</th><td>3</td><td>2</td><td>18</td></tr>
+              <tr><th scope="row">每批利潤（千元）</th><td>3</td><td>5</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="solution">
+          <p class="box-title">解：先建模</p>
+          <p>令 $x_1$、$x_2$ 為每週生產產品 1、產品 2 的批數：</p>
+          $$\begin{aligned}
+          \max \quad & Z = 3x_1 + 5x_2 \\
+          \text{s.t.} \quad & x_1 \le 4 \\
+          & 2x_2 \le 12 \\
+          & 3x_1 + 2x_2 \le 18 \\
+          & x_1,\ x_2 \ge 0
+          \end{aligned}$$
+          <p>接下來用圖解法求解，步驟在下一節。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="graphical-method">
+      <h2>圖解法</h2>
+      <p>只有兩個變數時，可以把可行解區域畫在平面上，直接看出最佳解：</p>
+      <ol class="steps">
+        <li>非負限制 $x_1, x_2 \ge 0$ 讓我們只看第一象限。</li>
+        <li>每條限制式先畫出等號成立的直線，再代入原點 $(0, 0)$ 判斷哪一側可行。</li>
+        <li>所有可行側的交集就是可行解區域，下圖的綠色多邊形。</li>
+        <li>畫一條等利潤線 $3x_1 + 5x_2 = Z$，往利潤增加的方向（箭頭）平移；離開可行解區域前最後碰到的點，就是最佳解。</li>
+      </ol>
+
+      <figure class="widget" data-widget="lp-graph">
+        <script type="application/json">
+          {
+            "title": "Wyndor 玻璃公司的可行解區域、等利潤線與最佳解",
+            "vars": ["x₁", "x₂"],
+            "objective": [3, 5],
+            "constraints": [
+              { "a": [1, 0], "b": 4, "label": "x₁ ≤ 4", "labelAt": [4.12, 9.3] },
+              { "a": [0, 2], "b": 12, "label": "2x₂ ≤ 12", "labelAt": [5.15, 6.2] },
+              { "a": [3, 2], "b": 18, "label": "3x₁ + 2x₂ ≤ 18", "labelAt": [5.25, 1.55] }
+            ],
+            "xmax": 7,
+            "ymax": 10,
+            "slider": { "index": 0, "min": 0, "max": 12, "step": 0.5, "label": "產品 1 的單位利潤" }
+          }
+        </script>
+        <figcaption>圖 2-1　紅色虛線是通過最佳解的等利潤線，箭頭指向利潤增加的方向。拖動滑桿改變產品 1 的利潤 $c_1$，觀察最佳解什麼時候會換到另一個頂點。</figcaption>
+      </figure>
+
+      <p>等利潤線最後碰到的是 $2x_2 = 12$ 與 $3x_1 + 2x_2 = 18$ 的交點。聯立解得 $x_2 = 6$、$x_1 = 2$，所以最佳解是 $(x_1, x_2) = (2, 6)$，$Z^* = 3 \times 2 + 5 \times 6 = 36$，也就是每週利潤 36 千元。</p>
+    </section>
+
+    <section id="corner-point">
+      <h2>角點定理</h2>
+      <p>把可行解區域的五個頂點都代進目標函數，可以驗證圖解法的答案：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">頂點 $(x_1, x_2)$</th><th scope="col">$Z = 3x_1 + 5x_2$</th></tr></thead>
+          <tbody>
+            <tr><td>$(0, 0)$</td><td>0</td></tr>
+            <tr><td>$(4, 0)$</td><td>12</td></tr>
+            <tr><td>$(4, 3)$</td><td>27</td></tr>
+            <tr><td>$(2, 6)$</td><td><strong>36</strong></td></tr>
+            <tr><td>$(0, 6)$</td><td>30</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="definition">
+        <p class="box-title">定理：角點定理（corner-point theorem）</p>
+        <p>如果線性規劃有最佳解，而且可行解區域至少有一個頂點，那麼一定有某個頂點（角點）是最佳解。</p>
+      </div>
+      <p>可行解區域裡有無限多個點，但頂點只有有限多個。角點定理告訴我們：<mark>只要在頂點之間找就好</mark>。第 3 課的單形法就是一個「有系統地從一個頂點走到更好的相鄰頂點」的方法。</p>
+      <p>圖 2-1 的滑桿也透露了另一件事：當 $c_1$ 在 0 到 7.5 之間時，最佳解一直停在 $(2, 6)$。原因是等利潤線的斜率 $-c_1/5$ 只要介於限制式 $2x_2 = 12$ 的斜率 0 與 $3x_1 + 2x_2 = 18$ 的斜率 $-3/2$ 之間，最後碰到的就是同一個頂點。這種「參數改變多少答案才會變」的分析叫做<strong>敏感度分析</strong>（sensitivity analysis）。</p>
+    </section>
+
+    <section id="special-cases">
+      <h2>三種特殊情況</h2>
+      <p>不是每個線性規劃都有唯一的最佳解，求解時要能認出下面三種情況：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">情況</th><th scope="col">圖上看起來</th><th scope="col">常見原因</th></tr></thead>
+          <tbody>
+            <tr><td>無可行解（infeasible）</td><td>所有限制式沒有共同區域</td><td>需求下限大於產能上限</td></tr>
+            <tr><td>無界（unbounded）</td><td>可行解區域往目標改善的方向無限延伸</td><td>漏寫了某個資源限制</td></tr>
+            <tr><td>多重最佳解（multiple optima）</td><td>等利潤線與可行解區域的一整條邊重合</td><td>目標函數與某條限制式平行</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout tip">
+        <p class="box-title">動手試試</p>
+        <p>把圖 2-1 的滑桿拉到 7.5，等利潤線會和 $3x_1 + 2x_2 = 18$ 重合，從 $(2, 6)$ 到 $(4, 3)$ 整條邊都是最佳解。</p>
+      </div>
+    </section>
+
+    <section id="python">
+      <h2>用 Python 求解</h2>
+      <p>變數一多就不能畫圖了，實務上會交給求解器。下面用 PuLP 套件解例題 2-1，PuLP 會呼叫內建的 CBC 求解器：</p>
+<pre><code class="language-python"># 例題 2-1：Wyndor 玻璃公司（安裝：pip install "pulp&lt;4"）
+import pulp
+
+model = pulp.LpProblem("Wyndor", pulp.LpMaximize)
+
+# 決策變數：每週生產的批數
+x1 = pulp.LpVariable("x1", lowBound=0)  # 產品 1：鋁框玻璃門
+x2 = pulp.LpVariable("x2", lowBound=0)  # 產品 2：木框窗戶
+
+# 目標函數：每週利潤（千元）
+model += 3 * x1 + 5 * x2, "Profit"
+
+# 限制式：三座工廠的可用時數
+model += x1 &lt;= 4, "Plant1"
+model += 2 * x2 &lt;= 12, "Plant2"
+model += 3 * x1 + 2 * x2 &lt;= 18, "Plant3"
+
+model.solve(pulp.PULP_CBC_CMD(msg=False))
+
+print("狀態：", pulp.LpStatus[model.status])
+print("x1 =", x1.value(), "，x2 =", x2.value())
+print("Z* =", pulp.value(model.objective))
+# 輸出：
+# 狀態： Optimal
+# x1 = 2.0 ，x2 = 6.0
+# Z* = 36.0</code></pre>
+      <div class="callout warn">
+        <p class="box-title">版本注意</p>
+        <p>PuLP 4 改寫了建立變數的寫法，也不再內建 CBC 求解器，上面的程式會出錯。本講義的程式一律以 <code>pip install "pulp&lt;4"</code> 安裝的 3.x 版為準。</p>
+      </div>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>線性規劃假設比例性、可加性、可分割性與確定性。</li>
+        <li>圖解法：畫出可行解區域，把等目標線往改善方向平移，最後碰到的點就是最佳解。</li>
+        <li>角點定理：有最佳解時，一定有頂點是最佳解，所以只需比較有限個頂點。</li>
+        <li>線性規劃可能無可行解、無界，或有多重最佳解。</li>
+        <li>實務上用求解器（例如 PuLP 搭配 CBC）求解，記得安裝 <code>pulp&lt;4</code>。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 2-1</span>用圖解法求例題 1-1（手搖飲店）的最佳解：$\max Z = 20x_1 + 30x_2$，s.t. $x_1 + x_2 \le 500$，$x_2 \le 200$，$x_1, x_2 \ge 0$。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>可行解區域的頂點是 $(0, 0)$、$(500, 0)$、$(300, 200)$、$(0, 200)$，對應的利潤分別是 0、10,000、12,000、6,000 元。最佳解是 $(x_1, x_2) = (300, 200)$，$Z^* = 12{,}000$ 元。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 2-2</span>例題 2-1 中，如果工廠 3 每週的可用工時從 18 小時增加到 20 小時，最佳解與 $Z^*$ 會變成多少？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>最佳解仍落在 $2x_2 = 12$ 與 $3x_1 + 2x_2 = 20$ 的交點：$x_2 = 6$、$x_1 = 8/3 \approx 2.67$，且滿足 $x_1 \le 4$。$Z^* = 3 \times \tfrac{8}{3} + 5 \times 6 = 38$。工廠 3 多 2 小時，利潤多 2 千元，代表工廠 3 每多 1 小時值 1 千元，這個數字叫做<strong>影子價格</strong>（shadow price），第 3 課的單形表會再看到它。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 2-3</span>$\max Z = x_1 + x_2$，s.t. $x_1 - x_2 \le 1$，$x_1, x_2 \ge 0$。這個問題的最佳解是什麼？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>沒有最佳解，問題是<strong>無界</strong>的。例如令 $x_1 = 0$，$x_2$ 可以任意變大而不違反限制式，$Z$ 也跟著無限增加。實務上遇到無界，通常代表漏寫了某個資源限制。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, McGraw-Hill, Chapter 3（Wyndor 例題出處）.</li>
+        <li>PuLP 官方文件：<a href="https://coin-or.github.io/pulp/">coin-or.github.io/pulp</a></li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>

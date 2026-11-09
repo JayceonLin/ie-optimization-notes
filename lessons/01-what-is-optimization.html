@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 1 課：最佳化問題是什麼？｜工工最佳化講義</title>
+  <meta name="description" content="認識決策變數、目標函數與限制式，把一段文字敘述寫成可以求解的最佳化模型。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="01-what-is-optimization">
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>說出最佳化模型的三個組成：決策變數、目標函數、限制式。</li>
+        <li>把一段文字敘述的決策問題，依照四個步驟寫成數學模型。</li>
+        <li>判斷一個模型屬於線性規劃、整數規劃還是其他類型。</li>
+      </ul>
+    </section>
+
+    <section id="three-parts">
+      <h2>最佳化模型的三個組成</h2>
+      <p>工廠每天都在做決策：這週要生產多少、哪張訂單先做、倉庫該開在哪裡。這些問題有共同的形狀——有一些<mark>可以自己決定的量</mark>，有一個<mark>想要越大或越小越好的指標</mark>，還有一堆<mark>不能違反的條件</mark>。最佳化（optimization）就是把這三件事寫成數學式，再找出最好的決定。</p>
+
+      <div class="definition">
+        <p class="box-title">定義：決策變數、目標函數、限制式</p>
+        <p><strong>決策變數</strong>（decision variable）是由我們決定數值的未知數，例如每天生產的數量 $x_1, x_2$。<br>
+        <strong>目標函數</strong>（objective function）是用決策變數寫成的績效指標，要最大化（利潤）或最小化（成本、時間）。<br>
+        <strong>限制式</strong>（constraint）是決策變數必須滿足的條件，例如資源用量不能超過上限。</p>
+      </div>
+
+      <p>寫成一般式就是：</p>
+      <div class="model">
+        $$\begin{aligned}
+        \max \ (\text{或} \min) \quad & Z = f(\mathbf{x}) \\
+        \text{s.t.} \quad & g_i(\mathbf{x}) \le b_i, \quad i = 1, \dots, m \\
+        & \mathbf{x} \in X
+        \end{aligned}$$
+      </div>
+      <p>其中 $\mathbf{x} = (x_1, \dots, x_n)$ 是所有決策變數，s.t. 是 subject to 的縮寫，讀作「受限於」；$X$ 用來寫變數本身的條件，例如非負或必須是整數。</p>
+
+      <div class="definition">
+        <p class="box-title">定義：可行解與最佳解</p>
+        <p>滿足所有限制式的 $\mathbf{x}$ 叫做<strong>可行解</strong>（feasible solution），所有可行解組成<strong>可行解區域</strong>（feasible region）。在可行解區域中讓目標函數最好的解，叫做<strong>最佳解</strong>（optimal solution），記為 $\mathbf{x}^*$，對應的目標值記為 $Z^*$。</p>
+      </div>
+    </section>
+
+    <section id="modeling-steps">
+      <h2>建模四步驟</h2>
+      <p>建模最常卡住的地方不是數學，而是不知道從哪裡下手。照著下面四個問題依序回答，大部分的題目都能寫出來：</p>
+      <ol class="steps">
+        <li><strong>我能決定什麼？</strong>寫出決策變數，並且寫清楚單位，例如「每天生產的紅茶杯數」，而不是只寫「紅茶」。</li>
+        <li><strong>什麼叫做好？</strong>寫出目標函數，並決定是最大化還是最小化。一個模型只能有一個目標函數。</li>
+        <li><strong>有什麼不能違反？</strong>逐一列出限制式：資源上限、需求下限、比例關係、邏輯條件。</li>
+        <li><strong>變數本身有什麼條件？</strong>檢查非負（$x_j \ge 0$）、是否必須是整數，並確認每條式子兩邊單位一致。</li>
+      </ol>
+      <div class="callout warn">
+        <p class="box-title">常見錯誤</p>
+        <p>把題目給的已知數字（例如「茶葉每天最多 5,000 公克」）當成決策變數。已知的數字叫做<strong>參數</strong>（parameter），它們出現在係數或右手邊，不是我們要決定的量。</p>
+      </div>
+    </section>
+
+    <section id="model-types">
+      <h2>模型的分類</h2>
+      <p>同樣是最佳化，模型長得不一樣，能用的解法也不一樣。這份講義依序介紹下表的前兩種與最後一種：</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">類型</th><th scope="col">目標函數與限制式</th><th scope="col">決策變數</th><th scope="col">本講義</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>線性規劃（LP）</td><td>全部是線性式</td><td>連續</td><td>第 2、3 課</td></tr>
+            <tr><td>整數規劃（IP）</td><td>全部是線性式</td><td>全部或部分必須是整數</td><td>第 4 課</td></tr>
+            <tr><td>非線性規劃（NLP）</td><td>至少有一條非線性</td><td>通常是連續</td><td>未收錄</td></tr>
+            <tr><td>組合最佳化</td><td>從有限多種排列組合中挑最好的</td><td>順序、路徑、分配</td><td>第 5 課</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>「線性」的意思是每個變數只會乘上常數再相加，不會出現 $x_1 x_2$、$x_1^2$ 或 $\sqrt{x_1}$ 這類項。</p>
+    </section>
+
+    <section id="example">
+      <h2>例題</h2>
+      <div class="example">
+        <p class="box-title">例題 1-1：手搖飲店的每日生產</p>
+        <p>一家手搖飲店每天要決定紅茶與奶茶各做幾杯。每杯紅茶利潤 20 元、每杯奶茶利潤 30 元。兩種飲料每杯都要用 10 公克茶葉，店裡每天最多只有 5,000 公克茶葉；奶茶每杯另外要 150 毫升鮮奶，鮮奶每天最多 30,000 毫升。假設做多少就賣多少，請寫出讓每日利潤最大的模型。</p>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p><strong>步驟 1：決策變數。</strong>令 $x_1$ 為每天紅茶的杯數，$x_2$ 為每天奶茶的杯數。</p>
+          <p><strong>步驟 2：目標函數。</strong>每日利潤 $Z = 20x_1 + 30x_2$（元），要最大化。</p>
+          <p><strong>步驟 3：限制式。</strong>茶葉：$10x_1 + 10x_2 \le 5000$（公克），兩邊同除以 10 得 $x_1 + x_2 \le 500$。鮮奶：$150x_2 \le 30000$（毫升），即 $x_2 \le 200$。</p>
+          <p><strong>步驟 4：變數條件。</strong>杯數不能是負的：$x_1, x_2 \ge 0$。</p>
+          <p>完整模型：</p>
+          $$\begin{aligned}
+          \max \quad & Z = 20x_1 + 30x_2 \\
+          \text{s.t.} \quad & x_1 + x_2 \le 500 \\
+          & x_2 \le 200 \\
+          & x_1,\ x_2 \ge 0
+          \end{aligned}$$
+          <p>這個模型的最佳解是 $x_1 = 300$、$x_2 = 200$，每日利潤 $Z^* = 12{,}000$ 元。第 3 課的練習會用單形法把這個答案算出來。</p>
+        </div>
+      </div>
+      <div class="callout tip">
+        <p class="box-title">小提醒</p>
+        <p>杯數其實應該是整數。這題的最佳解剛好是整數，所以當成線性規劃解就好；如果最佳解出現 312.5 杯這種數字，就要用第 4 課的整數規劃處理。</p>
+      </div>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>最佳化模型由決策變數、目標函數、限制式組成，三者缺一不可。</li>
+        <li>建模照四個問題依序回答：能決定什麼、什麼叫做好、什麼不能違反、變數本身有什麼條件。</li>
+        <li>題目給的已知數字是參數，不是決策變數。</li>
+        <li>目標函數與限制式都是線性、變數連續的模型叫做線性規劃；變數要求整數就變成整數規劃。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 1-1</span>在例題 1-1 中，下列哪些是決策變數？(a) 茶葉每天最多 5,000 公克；(b) 每天做幾杯紅茶；(c) 每杯奶茶利潤 30 元。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>只有 (b)。(a) 是限制式右手邊的參數，(c) 是目標函數係數的參數，兩者都是題目給定的已知數字。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 1-2</span>家具工廠生產桌子與椅子。桌子每張利潤 1,200 元，需要木工 4 小時、油漆 2 小時；椅子每張利潤 500 元，需要木工 1 小時、油漆 1 小時。每週木工最多 100 小時、油漆最多 60 小時，而且椅子數量至少要是桌子的 2 倍。請寫出最大化每週利潤的模型。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>令 $x_1$ 為每週生產的桌子數，$x_2$ 為每週生產的椅子數。</p>
+          $$\begin{aligned}
+          \max \quad & Z = 1200x_1 + 500x_2 \\
+          \text{s.t.} \quad & 4x_1 + x_2 \le 100 && \text{（木工）} \\
+          & 2x_1 + x_2 \le 60 && \text{（油漆）} \\
+          & 2x_1 - x_2 \le 0 && \text{（椅子至少是桌子的 2 倍）} \\
+          & x_1,\ x_2 \ge 0
+          \end{aligned}$$
+          <p>「椅子至少是桌子的 2 倍」原本寫成 $x_2 \ge 2x_1$，移項後變成 $2x_1 - x_2 \le 0$，這樣所有限制式都是「左邊有變數、右邊是常數」的標準樣子。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 1-3</span>如果例題 1-1 再加上「每天至少要做 50 杯紅茶」以及「杯數必須是整數」兩個條件，模型要怎麼改？它屬於哪一類模型？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>加上限制式 $x_1 \ge 50$，並把變數條件改成 $x_1, x_2 \ge 0$ 且為整數。目標函數與限制式仍然是線性的，但變數必須是整數，所以是<strong>整數規劃</strong>。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, McGraw-Hill, Chapter 2–3.</li>
+        <li>H. A. Taha, <cite>Operations Research: An Introduction</cite>, Pearson, Chapter 1.</li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>

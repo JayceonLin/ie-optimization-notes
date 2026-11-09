@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 4 課：整數規劃｜工工最佳化講義</title>
+  <meta name="description" content="四捨五入為什麼會失敗？學會 0-1 變數的建模技巧與分支界限法的基本想法。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="04-integer-programming">
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>說明什麼情況需要整數變數或 0-1 變數。</li>
+        <li>解釋為什麼把 LP 的答案四捨五入不一定得到最佳整數解。</li>
+        <li>用 0-1 變數寫出「最多選幾個」「互斥」「依賴」「固定成本」等條件。</li>
+        <li>說出分支界限法的分支、定界與剪枝。</li>
+      </ul>
+    </section>
+
+    <section id="why-integer">
+      <h2>為什麼需要整數</h2>
+      <p>第 2 課的可分割性假設允許變數是小數，但很多決策天生就不能切開：</p>
+      <ul>
+        <li><strong>不可分割的數量：</strong>要買幾台機器、排幾個班、派幾輛車。</li>
+        <li><strong>是或否的決策：</strong>要不要蓋新廠、要不要投資某個專案、某張訂單要不要接。這種決策用只能是 0 或 1 的變數表示。</li>
+      </ul>
+      <div class="definition">
+        <p class="box-title">定義：整數規劃（integer programming，IP）</p>
+        <p>目標函數與限制式都是線性，但部分或全部變數必須是整數的模型。全部變數都是整數叫<strong>純整數規劃</strong>；只有部分是整數叫<strong>混合整數規劃</strong>（MIP）；變數只能是 0 或 1 叫 <strong>0-1 整數規劃</strong>（binary integer programming）。</p>
+      </div>
+    </section>
+
+    <section id="rounding-trap">
+      <h2>四捨五入的陷阱</h2>
+      <p>最直覺的做法是：先當成一般 LP 解，再把答案四捨五入。下面的例子說明這樣可能錯得很遠。</p>
+      <div class="example">
+        <p class="box-title">例題 4-1：四捨五入不一定可行，也不一定最好</p>
+        <p>求解 $\max Z = x_1 + 5x_2$，s.t. $x_1 + 10x_2 \le 20$，$x_1 \le 2$，$x_1, x_2 \ge 0$ 且為整數。</p>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p>先拿掉整數限制求解，得到 $(x_1, x_2) = (2, 1.8)$，$Z = 11$。接著比較幾個候選答案：</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">做法</th><th scope="col">$(x_1, x_2)$</th><th scope="col">結果</th></tr></thead>
+              <tbody>
+                <tr><td>四捨五入</td><td>$(2, 2)$</td><td>$2 + 20 = 22 &gt; 20$，不可行</td></tr>
+                <tr><td>無條件捨去</td><td>$(2, 1)$</td><td>可行，$Z = 7$</td></tr>
+                <tr><td>真正的最佳整數解</td><td>$(0, 2)$</td><td>可行，$Z = 10$</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>最佳整數解 $(0, 2)$ 離 LP 的答案 $(2, 1.8)$ 很遠，靠四捨五入完全找不到。</p>
+        </div>
+      </div>
+      <div class="definition">
+        <p class="box-title">定義：LP 鬆弛（LP relaxation）</p>
+        <p>把整數規劃的整數限制拿掉後得到的線性規劃。它的可行解區域比原問題大，所以對最大化問題而言，LP 鬆弛的最佳值是整數規劃最佳值的<strong>上界</strong>：例題 4-1 中 $11 \ge 10$。</p>
+      </div>
+    </section>
+
+    <section id="branch-and-bound">
+      <h2>分支界限法</h2>
+      <p>整數解的組合太多，不能全部列舉。分支界限法（branch and bound）用 LP 鬆弛幫忙，把搜尋空間一刀一刀切開，並把不可能更好的部分整個丟掉：</p>
+      <ol class="steps">
+        <li><strong>定界：</strong>解目前子問題的 LP 鬆弛，它的最佳值是這個子問題能達到的上界。</li>
+        <li><strong>分支：</strong>如果答案中有變數不是整數，例如 $x_2 = 1.8$，就切成 $x_2 \le 1$ 與 $x_2 \ge 2$ 兩個子問題。中間的 $1 &lt; x_2 &lt; 2$ 本來就沒有整數解，丟掉沒有損失。</li>
+        <li><strong>剪枝：</strong>子問題不可行、上界不比目前找到的最佳整數解好，或答案已經是整數時，這個子問題就不必再往下分。</li>
+      </ol>
+      <p>用例題 4-1 走一次：</p>
+      <div class="table-wrap">
+        <table>
+          <caption>表 4-1　例題 4-1 的分支界限過程</caption>
+          <thead><tr><th scope="col">節點</th><th scope="col">加入的限制</th><th scope="col">LP 鬆弛的解</th><th scope="col">$Z$</th><th scope="col">處理</th></tr></thead>
+          <tbody>
+            <tr><td>0（根）</td><td>無</td><td>$(2, 1.8)$</td><td>11</td><td>$x_2$ 不是整數，分支</td></tr>
+            <tr><td>1</td><td>$x_2 \le 1$</td><td>$(2, 1)$</td><td>7</td><td>整數解，目前最佳 $Z = 7$</td></tr>
+            <tr><td>2</td><td>$x_2 \ge 2$</td><td>$(0, 2)$</td><td>10</td><td>整數解且比 7 好，更新為 $Z = 10$</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>所有節點都處理完，最佳整數解是 $(0, 2)$，$Z^* = 10$。實務上的求解器（例如 PuLP 背後的 CBC）用的就是分支界限法加上許多加速技巧。</p>
+    </section>
+
+    <section id="binary-modeling">
+      <h2>0-1 變數的建模技巧</h2>
+      <p>0-1 變數真正厲害的地方是能把「邏輯條件」寫成線性限制式。令 $y_A, y_B, \dots \in \{0, 1\}$，1 代表選擇、0 代表不選：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">想表達的條件</th><th scope="col">限制式</th></tr></thead>
+          <tbody>
+            <tr><td>最多選 $k$ 個</td><td>$\sum_i y_i \le k$</td></tr>
+            <tr><td>A、B 至少選一個</td><td>$y_A + y_B \ge 1$</td></tr>
+            <tr><td>A、B 不能同時選（互斥）</td><td>$y_A + y_B \le 1$</td></tr>
+            <tr><td>選 A 就必須選 B（依賴）</td><td>$y_A \le y_B$</td></tr>
+            <tr><td>有生產才付固定成本 $f$，產量上限 $M$</td><td>成本 $f y + c x$，且 $x \le M y$</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>最後一列的 $x \le My$ 是常見的<strong>大 M 限制式</strong>：$y = 0$ 時強迫 $x = 0$；$y = 1$ 時 $x$ 最多到 $M$，等於沒有額外限制。</p>
+      <div class="callout warn">
+        <p class="box-title">常見錯誤</p>
+        <p>為了保險把 $M$ 設成 $10^9$。$M$ 太大會讓 LP 鬆弛變得很鬆、分支界限法剪不掉節點，也容易出現數值誤差。$M$ 應該取變數實際可能的上限，例如產能。</p>
+      </div>
+    </section>
+
+    <section id="example">
+      <h2>例題：投資專案選擇</h2>
+      <div class="example">
+        <p class="box-title">例題 4-2：預算有限時要投資哪些專案</p>
+        <p>公司有 4 個候選專案，總預算 14 百萬元，每個專案只能全投或不投。(a) 要投資哪些專案，總淨現值（NPV）最大？(b) 如果專案 D 的技術需要專案 A 先完成，也就是「選 D 就必須選 A」，答案會怎麼變？</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">專案</th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">投資金額（百萬元）</th><td>5</td><td>7</td><td>4</td><td>3</td></tr>
+              <tr><th scope="row">淨現值（百萬元）</th><td>8</td><td>11</td><td>6</td><td>4</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p>令 $y_k = 1$ 代表投資專案 $k$，否則為 0：</p>
+          $$\begin{aligned}
+          \max \quad & Z = 8y_A + 11y_B + 6y_C + 4y_D \\
+          \text{s.t.} \quad & 5y_A + 7y_B + 4y_C + 3y_D \le 14 \\
+          & y_A, y_B, y_C, y_D \in \{0, 1\}
+          \end{aligned}$$
+          <p>(a) 最佳解是投資 B、C、D，剛好用完 14 百萬元，總淨現值 $Z^* = 21$ 百萬元。</p>
+          <p>(b) 加上依賴限制 $y_D \le y_A$ 後，B、C、D 的組合不再可行，最佳解變成投資 A、B，總淨現值 $Z^* = 19$ 百萬元。</p>
+        </div>
+      </div>
+      <div class="callout tip">
+        <p class="box-title">為什麼不能照「CP 值」挑</p>
+        <p>依淨現值除以金額排序是 A（1.6）、B（1.57）、C（1.5）、D（1.33）。依序挑 A、B 之後預算剩 2，C、D 都放不下，只得到 19，比 (a) 的 21 差。貪婪地挑 CP 值最高的，不保證最佳。</p>
+      </div>
+      <p>用 PuLP 求解時，把變數宣告成 <code>cat="Binary"</code> 即可：</p>
+<pre><code class="language-python"># 例題 4-2：投資專案選擇（安裝：pip install "pulp&lt;4"）
+import pulp
+
+projects = ["A", "B", "C", "D"]
+cost = {"A": 5, "B": 7, "C": 4, "D": 3}   # 投資金額（百萬元）
+npv = {"A": 8, "B": 11, "C": 6, "D": 4}   # 淨現值（百萬元）
+budget = 14
+
+model = pulp.LpProblem("CapitalBudgeting", pulp.LpMaximize)
+y = pulp.LpVariable.dicts("y", projects, cat="Binary")  # 1 = 投資，0 = 不投資
+
+model += pulp.lpSum(npv[k] * y[k] for k in projects), "TotalNPV"
+model += pulp.lpSum(cost[k] * y[k] for k in projects) &lt;= budget, "Budget"
+# 想加入「選 D 就必須選 A」時，把下一行的 # 拿掉
+# model += y["D"] &lt;= y["A"], "D_requires_A"
+
+model.solve(pulp.PULP_CBC_CMD(msg=False))
+
+chosen = [k for k in projects if y[k].value() &gt; 0.5]
+print("投資專案：", chosen)
+print("總淨現值：", pulp.value(model.objective))
+# 輸出（不含依賴限制）：
+# 投資專案： ['B', 'C', 'D']
+# 總淨現值： 21.0</code></pre>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>不可分割的數量用整數變數，是或否的決策用 0-1 變數。</li>
+        <li>把 LP 答案四捨五入可能不可行，也可能離最佳解很遠。</li>
+        <li>LP 鬆弛的最佳值是整數規劃最佳值的界限（最大化時是上界）。</li>
+        <li>分支界限法：用 LP 鬆弛定界、對非整數變數分支、把沒希望的子問題剪掉。</li>
+        <li>0-1 變數可以表達選幾個、互斥、依賴與固定成本；大 M 要取合理的上限。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 4-1</span>延續例題 4-2，用 0-1 變數寫出下列條件：(a) A、B、C 三個專案最多選兩個；(b) B 與 C 不能同時選；(c) 選了 C 就必須選 A。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>(a) $y_A + y_B + y_C \le 2$；(b) $y_B + y_C \le 1$；(c) $y_C \le y_A$。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 4-2</span>某產線每生產 1 單位成本 50 元，但只要當天開工就要先付 2,000 元的開機費，每天產能上限 300 單位。請寫出每日成本與相關限制式。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>令 $x$ 為當天產量，$y \in \{0, 1\}$ 表示是否開工。每日成本為 $2000y + 50x$，限制式為 $x \le 300y$，$x \ge 0$。這裡的大 M 直接取產能 300：不開工時 $x$ 必須是 0，開工時最多生產 300 單位。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 4-3</span>例題 4-1 中，LP 鬆弛的最佳值 11 告訴我們什麼？如果分支界限法在某個節點得到 LP 鬆弛值 9.5，而目前已經找到 $Z = 10$ 的整數解，該怎麼處理這個節點？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>11 是整數規劃最佳值的上界：任何整數解的 $Z$ 都不會超過 11。若某節點的上界只有 9.5，它底下所有整數解都不會超過 9.5，不可能比已經找到的 10 好，所以直接剪枝，不用再分支。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, McGraw-Hill, Chapter 12（整數規劃與分支界限法）.</li>
+        <li>L. A. Wolsey, <cite>Integer Programming</cite>, Wiley.</li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>

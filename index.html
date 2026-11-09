@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>工工最佳化講義｜給工業工程學生的作業研究入門</title>
+  <meta name="description" content="給工業工程學生的作業研究講義：最佳化建模、線性規劃、單形法、整數規劃與機器排程，每課都有例題、互動圖與可執行的 Python 程式。">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+  <script defer src="assets/vendor/katex/katex.min.js"></script>
+  <script defer src="assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="data/lessons.js"></script>
+  <script defer src="assets/js/site.js"></script>
+</head>
+<body data-page="home">
+  <main id="main" class="home-main">
+
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <h1 id="hero-title">從一張方格紙<br>開始學最佳化</h1>
+        <p class="lead">這是一份給工業工程學生的作業研究講義。從把問題寫成模型開始，接著是線性規劃、單形法、整數規劃，最後走到工廠排程。每一課都有算完的例題、可以動手調的圖，以及能直接執行的 Python 程式。</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="lessons/01-what-is-optimization.html">從第 1 課開始</a>
+          <a class="btn btn-secondary" href="#lessons">看課程目錄</a>
+        </div>
+      </div>
+      <figure class="widget" data-widget="lp-graph">
+        <script type="application/json">
+          {
+            "title": "Wyndor 玻璃公司生產問題的可行解區域與最佳解",
+            "vars": ["x₁", "x₂"],
+            "objective": [3, 5],
+            "constraints": [
+              { "a": [1, 0], "b": 4, "label": "x₁ ≤ 4", "labelAt": [4.12, 9.3] },
+              { "a": [0, 2], "b": 12, "label": "2x₂ ≤ 12", "labelAt": [5.15, 6.2] },
+              { "a": [3, 2], "b": 18, "label": "3x₁ + 2x₂ ≤ 18", "labelAt": [5.25, 1.55] }
+            ],
+            "xmax": 7,
+            "ymax": 10,
+            "slider": { "index": 0, "min": 0, "max": 12, "step": 0.5, "label": "產品 1 的單位利潤" }
+          }
+        </script>
+        <figcaption>第 2 課的 Wyndor 玻璃公司例題。拖動滑桿改變產品 1 的利潤，紅點是最佳解：利潤只變一點點時，最佳解不會動；超過 7.5 才會跳到另一個頂點。</figcaption>
+      </figure>
+    </section>
+
+    <section class="home-section band" id="lessons" aria-labelledby="lessons-title">
+      <h2 id="lessons-title">課程目錄</h2>
+      <p class="section-lead">建議照順序讀，後面的課會用到前面的例題。每課最後都有練習題，解答先收起來，自己算過再打開。</p>
+      <ol class="syllabus" id="lesson-list">
+        <!-- 由 site.js 依 data/lessons.js 產生；以下是沒有 JavaScript 時的備援 -->
+        <li><a href="lessons/01-what-is-optimization.html"><span class="s-no">1</span><span class="s-line"><span class="s-title">最佳化問題是什麼？</span></span></a></li>
+      </ol>
+    </section>
+
+    <section class="home-section band" aria-labelledby="how-title">
+      <h2 id="how-title">這份講義怎麼長出新的一課</h2>
+      <p class="section-lead">整個網站由一份給 AI 看的規則檔 <a href="https://github.com/JayceonLin/ie-optimization-notes/blob/main/AGENTS.md">AGENTS.md</a> 管理。不管是人還是 AI，新增一課都走同一套流程，所以每一課的結構、用詞與外觀都一致。</p>
+      <ol class="process">
+        <li>
+          <h3>讀規則</h3>
+          <p>AGENTS.md 寫清楚頁面骨架、檔名、可用的元件、數學符號與用詞，AI 動手前先讀完。</p>
+        </li>
+        <li>
+          <h3>用腳本開新課</h3>
+          <p>執行 <code>node scripts/new-lesson.mjs</code>，自動建立講義檔並登記到課程清單，再把內容填進固定的段落。</p>
+        </li>
+        <li>
+          <h3>自動檢查</h3>
+          <p>執行 <code>node scripts/check.mjs</code>，逐條核對規則：段落是否齊全、連結是否有效、清單是否一致。全部通過才算完成。</p>
+        </li>
+      </ol>
+    </section>
+
+  </main>
+</body>
+</html>

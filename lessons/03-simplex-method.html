@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 3 課：單形法｜工工最佳化講義</title>
+  <meta name="description" content="加上寬鬆變數、建立單形表，一步一步從原點走到最佳頂點。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="03-simplex-method">
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>加入寬鬆變數，把「$\le$」限制式改寫成等式。</li>
+        <li>分辨基變數與非基變數，說明基本可行解和頂點的關係。</li>
+        <li>用單形表完成轉軸：選進入變數、做最小比值檢定、選離開變數。</li>
+        <li>從最終單形表讀出最佳解與影子價格。</li>
+      </ul>
+    </section>
+
+    <section id="idea">
+      <h2>單形法的想法</h2>
+      <p>第 2 課的角點定理說：最佳解一定可以在頂點找到。但變數一多，頂點數量會爆炸，不可能一一列出來比較。單形法（simplex method）的做法像爬山：</p>
+      <ol class="steps">
+        <li>從一個頂點出發，通常是原點。</li>
+        <li>看看相鄰的頂點裡，有沒有讓目標函數更好的。</li>
+        <li>有的話就沿著邊走過去；沒有的話，目前的頂點就是最佳解。</li>
+      </ol>
+      <p>線性規劃的可行解區域是凸的，所以「相鄰頂點都沒有更好」就保證是整體最佳，不會卡在局部最佳。以 Wyndor 為例，單形法會走 $(0, 0) \to (0, 6) \to (2, 6)$，只比較了 3 個頂點就停下來。</p>
+    </section>
+
+    <section id="slack">
+      <h2>寬鬆變數與基本可行解</h2>
+      <p>要用代數的方式「沿著邊走」，先把不等式變成等式。每條「$\le$」限制式加上一個非負的<strong>寬鬆變數</strong>：</p>
+      <div class="model">
+        $$\begin{aligned}
+        x_1 \phantom{{}+2x_2} + s_1 &= 4 \\
+        2x_2 + s_2 &= 12 \\
+        3x_1 + 2x_2 + s_3 &= 18 \\
+        x_1, x_2, s_1, s_2, s_3 &\ge 0
+        \end{aligned}$$
+      </div>
+      <div class="definition">
+        <p class="box-title">定義：寬鬆變數（slack variable）</p>
+        <p>$s_i$ 代表第 $i$ 種資源沒用完的量。例如 $s_1 = 4 - x_1$ 是工廠 1 剩下的工時。注意不要和第 4 課的「LP 鬆弛」搞混，兩者是不同概念。</p>
+      </div>
+      <p>現在有 3 條等式、5 個變數。任選 2 個變數設為 0，剩下 3 個就能解出唯一的值：</p>
+      <div class="definition">
+        <p class="box-title">定義：基變數、非基變數、基本可行解</p>
+        <p>設為 0 的變數叫<strong>非基變數</strong>（nonbasic variable），解出來的變數叫<strong>基變數</strong>（basic variable）。這樣得到的解叫<strong>基本解</strong>；如果所有變數都 $\ge 0$，就是<strong>基本可行解</strong>（basic feasible solution，BFS）。每個基本可行解剛好對應可行解區域的一個頂點。</p>
+      </div>
+      <p>例如令 $x_1 = x_2 = 0$，得到 $s_1 = 4$、$s_2 = 12$、$s_3 = 18$，對應頂點 $(0, 0)$：什麼都不生產，所有工時都沒用。</p>
+    </section>
+
+    <section id="example">
+      <h2>例題：用單形表解 Wyndor</h2>
+      <div class="example">
+        <p class="box-title">例題 3-1：Wyndor 玻璃公司的單形表</p>
+        <p>用單形法求解例題 2-1：$\max Z = 3x_1 + 5x_2$，s.t. $x_1 \le 4$，$2x_2 \le 12$，$3x_1 + 2x_2 \le 18$，$x_1, x_2 \ge 0$。</p>
+        <div class="solution">
+          <p class="box-title">解：第 0 次迭代（原點）</p>
+          <p>把目標函數改寫成 $Z - 3x_1 - 5x_2 = 0$ 放在第一列，寬鬆變數當初始基變數。Z 列中最負的係數是 $x_2$ 的 $-5$（每多做 1 批產品 2，利潤增加 5），所以 $x_2$ 是<strong>進入變數</strong>，下表灰色欄。</p>
+          <div class="table-wrap">
+            <table class="tableau">
+              <caption>表 3-1　初始單形表</caption>
+              <thead><tr><th scope="col">基變數</th><th scope="col">$x_1$</th><th scope="col" class="entering">$x_2$</th><th scope="col">$s_1$</th><th scope="col">$s_2$</th><th scope="col">$s_3$</th><th scope="col">右手邊</th><th scope="col">比值</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">$Z$</th><td>−3</td><td class="entering">−5</td><td>0</td><td>0</td><td>0</td><td>0</td><td></td></tr>
+                <tr><th scope="row">$s_1$</th><td>1</td><td class="entering">0</td><td>1</td><td>0</td><td>0</td><td>4</td><td>不計</td></tr>
+                <tr><th scope="row">$s_2$</th><td>0</td><td class="entering pivot">2</td><td>0</td><td>1</td><td>0</td><td>12</td><td>12 / 2 = 6</td></tr>
+                <tr><th scope="row">$s_3$</th><td>3</td><td class="entering">2</td><td>0</td><td>0</td><td>1</td><td>18</td><td>18 / 2 = 9</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>最小比值檢定：</strong>$x_2$ 增加時，哪個基變數會最先降到 0？只看 $x_2$ 欄係數為正的列，計算「右手邊 ÷ 係數」：$s_2$ 列是 6，$s_3$ 列是 9，最小的是 $s_2$，所以 $s_2$ 是<strong>離開變數</strong>。紅框的 2 叫做<strong>樞紐元素</strong>（pivot）。</p>
+          <p><strong>轉軸：</strong>樞紐列除以 2，再用列運算把 $x_2$ 欄的其他數字消成 0（Z 列加上新樞紐列的 5 倍，$s_3$ 列減去新樞紐列的 2 倍）。</p>
+
+          <p class="box-title">第 1 次迭代：頂點 (0, 6)</p>
+          <div class="table-wrap">
+            <table class="tableau">
+              <caption>表 3-2　第一次轉軸後</caption>
+              <thead><tr><th scope="col">基變數</th><th scope="col" class="entering">$x_1$</th><th scope="col">$x_2$</th><th scope="col">$s_1$</th><th scope="col">$s_2$</th><th scope="col">$s_3$</th><th scope="col">右手邊</th><th scope="col">比值</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">$Z$</th><td class="entering">−3</td><td>0</td><td>0</td><td>5/2</td><td>0</td><td>30</td><td></td></tr>
+                <tr><th scope="row">$s_1$</th><td class="entering">1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>4</td><td>4 / 1 = 4</td></tr>
+                <tr><th scope="row">$x_2$</th><td class="entering">0</td><td>1</td><td>0</td><td>1/2</td><td>0</td><td>6</td><td>不計</td></tr>
+                <tr><th scope="row">$s_3$</th><td class="entering pivot">3</td><td>0</td><td>0</td><td>−1</td><td>1</td><td>6</td><td>6 / 3 = 2</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>目前 $Z = 30$，對應頂點 $(0, 6)$。Z 列還有負數 $-3$，所以 $x_1$ 進入；比值 $s_3$ 列最小（2），$s_3$ 離開。</p>
+
+          <p class="box-title">第 2 次迭代：頂點 (2, 6)</p>
+          <div class="table-wrap">
+            <table class="tableau">
+              <caption>表 3-3　最終單形表</caption>
+              <thead><tr><th scope="col">基變數</th><th scope="col">$x_1$</th><th scope="col">$x_2$</th><th scope="col">$s_1$</th><th scope="col">$s_2$</th><th scope="col">$s_3$</th><th scope="col">右手邊</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">$Z$</th><td>0</td><td>0</td><td>0</td><td>3/2</td><td>1</td><td>36</td></tr>
+                <tr><th scope="row">$s_1$</th><td>0</td><td>0</td><td>1</td><td>1/3</td><td>−1/3</td><td>2</td></tr>
+                <tr><th scope="row">$x_2$</th><td>0</td><td>1</td><td>0</td><td>1/2</td><td>0</td><td>6</td></tr>
+                <tr><th scope="row">$x_1$</th><td>1</td><td>0</td><td>0</td><td>−1/3</td><td>1/3</td><td>2</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Z 列已經沒有負數，代表任何非基變數增加都不會讓利潤變高，停止。最佳解是 $x_1 = 2$、$x_2 = 6$、$Z^* = 36$，和圖解法相同。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="reading-tableau">
+      <h2>從最終單形表讀出更多資訊</h2>
+      <p>最終單形表不只給答案，還藏著管理上很有用的數字：</p>
+      <ul>
+        <li><strong>寬鬆變數的值：</strong>$s_1 = 2$ 表示工廠 1 每週還有 2 小時沒用到；$s_2 = s_3 = 0$ 表示工廠 2、3 的工時用完了，它們是<mark>瓶頸資源</mark>。</li>
+        <li><strong>影子價格：</strong>Z 列在 $s_1, s_2, s_3$ 底下的數字 $0, \tfrac{3}{2}, 1$，就是三座工廠每多 1 小時能增加的利潤（千元）。第 2 課練習 2-2 把工廠 3 加 2 小時、利潤多 2，正好對上這裡的 1。</li>
+      </ul>
+      <div class="callout tip">
+        <p class="box-title">管理意義</p>
+        <p>如果要花錢加班，應該優先加在影子價格最高的工廠 2；工廠 1 的影子價格是 0，加班完全沒有好處。</p>
+      </div>
+    </section>
+
+    <section id="algorithm">
+      <h2>單形法步驟整理</h2>
+      <ol class="steps">
+        <li><strong>建立初始單形表：</strong>每條限制式加寬鬆變數，寬鬆變數當基變數，目標函數改寫成 $Z - \sum c_j x_j = 0$。</li>
+        <li><strong>最佳性檢查：</strong>Z 列的係數都 $\ge 0$ 就停止，目前的解就是最佳解。</li>
+        <li><strong>選進入變數：</strong>挑 Z 列中最負的係數所在的欄。</li>
+        <li><strong>選離開變數：</strong>對進入變數欄中係數為正的列做最小比值檢定，比值最小的列的基變數離開。</li>
+        <li><strong>轉軸：</strong>樞紐列除以樞紐元素，再用列運算把該欄其他數字消成 0，回到步驟 2。</li>
+      </ol>
+      <div class="callout warn">
+        <p class="box-title">常見錯誤</p>
+        <p>比值檢定時把係數為 0 或負數的列也算進來。這些列不會限制進入變數增加，必須跳過。如果進入變數那一欄完全沒有正係數，代表問題是無界的。</p>
+      </div>
+      <p>本課只處理標準形式。遇到「$\ge$」或「$=$」限制式時，原點不是可行解，需要先用大 M 法（Big-M method）或兩階段法（two-phase method）找到起始的基本可行解，可以參考延伸閱讀的教科書。</p>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>寬鬆變數把「$\le$」限制式變成等式，它的值就是沒用完的資源。</li>
+        <li>每個基本可行解對應一個頂點；單形法每次轉軸就是走到相鄰的頂點。</li>
+        <li>進入變數看 Z 列最負的係數，離開變數看最小比值（只算正係數）。</li>
+        <li>Z 列沒有負數時停止；寬鬆變數欄的 Z 列係數就是影子價格。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 3-1</span>用單形法求解例題 1-1（手搖飲店）：$\max Z = 20x_1 + 30x_2$，s.t. $x_1 + x_2 \le 500$，$x_2 \le 200$，$x_1, x_2 \ge 0$。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>初始 Z 列為 $(-20, -30, 0, 0 \mid 0)$。第一次 $x_2$ 進入，比值 $500/1 = 500$、$200/1 = 200$，$s_2$ 離開；轉軸後 Z 列為 $(-20, 0, 0, 30 \mid 6000)$，$s_1$ 列為 $(1, 0, 1, -1 \mid 300)$。第二次 $x_1$ 進入，只有 $s_1$ 列係數為正，$s_1$ 離開；轉軸後 Z 列為 $(0, 0, 20, 10 \mid 12000)$，沒有負數，停止。最佳解 $x_1 = 300$、$x_2 = 200$、$Z^* = 12{,}000$ 元。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 3-2</span>例題 3-1 的第一次迭代如果改選 $x_1$ 當進入變數（它的係數 $-3$ 也是負的），單形法會經過哪些頂點？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>$x_1$ 進入時比值為 $4/1 = 4$（$s_1$ 列）與 $18/3 = 6$（$s_3$ 列），$s_1$ 離開，走到 $(4, 0)$，$Z = 12$。接著 $x_2$ 進入、$s_3$ 離開，走到 $(4, 3)$，$Z = 27$。這時 Z 列在 $s_1$ 底下是 $-9/2$，$s_1$ 再進入、$s_2$ 離開，走到 $(2, 6)$，$Z = 36$。路徑是 $(0,0) \to (4,0) \to (4,3) \to (2,6)$，比原本多一次迭代，但答案相同。「選最負的係數」只是經驗法則，不保證步數最少。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 3-3</span>在表 3-3 中，為什麼工廠 1 的影子價格是 0？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>因為 $s_1 = 2 > 0$，工廠 1 本來就還有 2 小時沒用完。再多給它工時，也只是增加更多用不到的時間，最佳解和利潤都不會改變，所以影子價格是 0。只有用完的瓶頸資源（$s_i = 0$）才可能有正的影子價格。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, McGraw-Hill, Chapter 4（單形法、大 M 法與兩階段法）.</li>
+        <li>H. A. Taha, <cite>Operations Research: An Introduction</cite>, Pearson, Chapter 3.</li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>
