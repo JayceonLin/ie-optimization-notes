@@ -26,7 +26,7 @@ AGENTS.md（規則）
 node scripts/new-lesson.mjs   ← 從模板建立新課程，並登記到 data/lessons.js
    │  AI 把 TODO 換成內容
    ▼
-node scripts/check.mjs        ← 逐條檢查 R1～R13，錯誤訊息標出規則編號
+node scripts/check.mjs        ← 逐條檢查 R1～R14，錯誤訊息標出規則編號
    │  全部通過
    ▼
 git push → GitHub Pages 自動上線
@@ -35,6 +35,11 @@ git push → GitHub Pages 自動上線
 - `data/lessons.js` 是唯一的課程清單，首頁目錄、側邊欄、上一課／下一課都由它自動產生，新增一課不用改任何其他頁面。
 - 講義頁只寫內容，版面由 `assets/js/site.js` 統一產生，所以每一課的外觀與結構都一致。
 - 規則寫得夠具體，才能被 `check.mjs` 自動檢查；AI 看到 `[R5]` 這類錯誤訊息，就能回到 AGENTS.md 找到對應規則自行修正。
+
+## 延伸與重複使用
+
+- **繼續擴充：** AGENTS.md 第 14.1 節列出後續課程路線圖（對偶與敏感度分析、運輸、指派、網路、存貨、啟發式），每一課都標明可以沿用的例題與元件。
+- **換一個科目：** AGENTS.md 第 14.2 節說明只要改網站名稱、首頁與譯名表，就能用同一套骨架、元件和檢查腳本做另一門課的講義。
 
 ## 在本機預覽
 

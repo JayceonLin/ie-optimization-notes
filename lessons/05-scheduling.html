@@ -64,7 +64,7 @@
         <p><strong>SPT</strong>（shortest processing time first）：處理時間最短的先做。這樣排能讓 $1 \mid\mid \sum C_j$ 達到最佳。<br>
         <strong>EDD</strong>（earliest due date first）：交期最早的先做。這樣排能讓 $1 \mid\mid L_{\max}$ 達到最佳。</p>
       </div>
-      <p>SPT 的直覺是：排在第一個的工件，它的處理時間會被後面每個工件「等一次」，所以短的放前面，大家等得最少。EDD 的直覺是：如果某兩個相鄰工件的交期順序排反了，把它們對調，最晚的那個延遲只會變小、不會變大。</p>
+      <p>SPT 的直覺是：排在第一個的工件，它的處理時間會被後面每個工件「等一次」，所以短的放前面，大家等得最少。EDD 的直覺是：如果有兩個相鄰工件的交期順序排反了，把它們對調，這兩個工件中較大的延遲不會變大，其他工件的完工時間也不受影響。</p>
       <div class="callout warn">
         <p class="box-title">常見錯誤</p>
         <p>以為有一個順序可以讓所有指標同時最好。SPT 與 EDD 最佳化的是不同的指標，排出來常常不一樣，要先問清楚「這次最在意什麼」。</p>
@@ -225,7 +225,7 @@
     <section id="references">
       <h2>延伸閱讀</h2>
       <ul class="refs">
-        <li>M. L. Pinedo, <cite>Scheduling: Theory, Algorithms, and Systems</cite>, Springer, Chapter 3（單機）與 Chapter 6（流程工廠）.</li>
+        <li>M. L. Pinedo, <cite>Scheduling: Theory, Algorithms, and Systems</cite>, 5th ed., Springer, Chapter 3（單機）與 Chapter 6（流程工廠）.</li>
         <li>S. M. Johnson, “Optimal two- and three-stage production schedules with setup times included,” <cite>Naval Research Logistics Quarterly</cite>, 1(1), 61–68, 1954.</li>
         <li>R. L. Graham, E. L. Lawler, J. K. Lenstra, and A. H. G. Rinnooy Kan, “Optimization and approximation in deterministic sequencing and scheduling: a survey,” <cite>Annals of Discrete Mathematics</cite>, 5, 287–326, 1979.</li>
       </ul>

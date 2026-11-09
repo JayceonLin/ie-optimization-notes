@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 專案規則檢查：逐條驗證 AGENTS.md 的規則，錯誤訊息開頭的 [R編號] 對應 AGENTS.md 的規則編號。
+// 專案規則檢查：逐條驗證 AGENTS.md 的規則（R1～R14），錯誤訊息開頭的 [R編號] 對應 AGENTS.md 的規則編號。
 // 用法：node scripts/check.mjs        （有錯誤時結束代碼為 1）
 import fs from "node:fs";
 import path from "node:path";
@@ -33,6 +33,8 @@ lessons.forEach((l, i) => {
   if (typeof l.summary === "string" && !/TODO/.test(l.summary) && (l.summary.length < 15 || l.summary.length > 70)) {
     err("R1", where, `summary 長度 ${l.summary.length} 字，應在 15 到 70 字之間`);
   }
+  if (typeof l.summary === "string" && !/TODO/.test(l.summary) && !l.summary.endsWith("。")) err("R1", where, "summary 必須以全形句號「。」結尾");
+  if (typeof l.title === "string" && (l.title.length < 2 || l.title.length > 12)) err("R1", where, `title 長度 ${l.title.length} 字，應在 2 到 12 字之間`);
   if (![1, 2, 3].includes(l.level)) err("R1", where, "level 只能是 1（入門）、2（基礎）、3（進階）");
   if (!Number.isInteger(l.minutes) || l.minutes < 5 || l.minutes > 60) err("R1", where, "minutes 必須是 5 到 60 的整數");
   if (!Array.isArray(l.tags) || l.tags.length < 1 || l.tags.length > 5 || l.tags.some((t) => typeof t !== "string" || !t.trim())) {
@@ -116,6 +118,7 @@ for (const l of lessons) {
     err("R5", file, "section#exercises 之後只能接 section#references（延伸閱讀）");
   }
   const sectionBody = (id) => (article.match(new RegExp(`<section id="${id}">([\\s\\S]*?)</section>`)) || [])[1] || "";
+  if (!sectionBody("goals").includes("<p>讀完這一課，你應該能夠：</p>")) err("R5", file, "學習目標要先寫 <p>讀完這一課，你應該能夠：</p>，再接 <ul>");
   const goalsLi = count(sectionBody("goals"), /<li>/g);
   if (goalsLi < 2 || goalsLi > 5) err("R5", file, `學習目標要有 2 到 5 點，目前 ${goalsLi} 點`);
   const sumBody = sectionBody("summary");
@@ -142,8 +145,12 @@ for (const l of lessons) {
     if (!b.trimStart().startsWith(want)) err("R6", file, `第 ${k + 1} 題練習必須以 ${want} 開頭`);
     if (!/<div class="answer">\s*<p class="box-title">解答<\/p>/.test(b)) err("R6", file, `練習 ${n}-${k + 1} 缺少 <div class="answer"><p class="box-title">解答</p>`);
   });
-  for (const m of article.matchAll(/<(figcaption|caption)>\s*(圖|表) (\d+)-(\d+)/g)) {
+  const seq = { 圖: 0, 表: 0 };
+  for (const m of article.matchAll(/<(figcaption|caption)>\s*(圖|表) (\d+)-(\d+)(.)/g)) {
     if (Number(m[3]) !== n) err("R6", file, `${m[2]} ${m[3]}-${m[4]} 的章號應該是 ${n}`);
+    seq[m[2]] += 1;
+    if (Number(m[4]) !== seq[m[2]]) err("R6", file, `${m[2]} ${m[3]}-${m[4]} 的流水號應該是 ${seq[m[2]]}（同一頁從 1 開始連續）`);
+    if (m[5] !== "\u3000") err("R6", file, `${m[2]} ${m[3]}-${m[4]} 後面要接一個全形空格`);
   }
 
   // R7：不能有行內樣式與自訂腳本
@@ -191,6 +198,33 @@ for (const l of lessons) {
     const code = inner.replace(/^<code[^>]*>/, "").replace(/<\/code>$/, "");
     if (/[<>]/.test(code)) err("R11", file, "程式碼裡的 < 與 > 必須寫成 &lt; 與 &gt;");
   }
+}
+
+// ---------- R14：禁用詞（「不要用」欄直接從 AGENTS.md 的 W2 表格讀取） ----------
+const agents = read("AGENTS.md");
+const w2 = (agents.match(/\*\*W2[\s\S]*?\*\*W3/) || [""])[0];
+const banned = ["讓我們", "總而言之", "！", "!"];
+for (const row of w2.split("\n")) {
+  const cells = row.split("|").map((c) => c.trim());
+  if (cells.length < 5 || cells[1] === "English" || /^-+$/.test(cells[1])) continue;
+  const word = cells[3].split("（")[0].trim();
+  if (word) banned.push(word);
+}
+function proseOf(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<pre>[\s\S]*?<\/pre>/g, " ")
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/\$\$[\s\S]*?\$\$/g, " ")
+    .replace(/\$[^$]*\$/g, " ")
+    .replace(/<[^>]+>/g, " ");
+}
+const proseFiles = ["index.html", ...lessons.filter((l) => ID_PATTERN.test(l.id || "") && exists(`lessons/${l.id}.html`)).map((l) => `lessons/${l.id}.html`)];
+for (const f of proseFiles) {
+  const text = proseOf((read(f).match(/<body[\s\S]*<\/body>/) || [""])[0]);
+  for (const w of banned) if (text.includes(w)) err("R14", f, `出現禁用詞「${w}」（AGENTS.md W2、W6）`);
+  const emoji = text.match(/\p{Extended_Pictographic}/u);
+  if (emoji) err("R14", f, `出現 emoji「${emoji[0]}」`);
 }
 
 // ---------- R12：首頁 ----------

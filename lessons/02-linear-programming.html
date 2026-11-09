@@ -90,7 +90,7 @@
       <h2>圖解法</h2>
       <p>只有兩個變數時，可以把可行解區域畫在平面上，直接看出最佳解：</p>
       <ol class="steps">
-        <li>非負限制 $x_1, x_2 \ge 0$ 讓我們只看第一象限。</li>
+        <li>非負限制 $x_1, x_2 \ge 0$ 表示只需要看第一象限。</li>
         <li>每條限制式先畫出等號成立的直線，再代入原點 $(0, 0)$ 判斷哪一側可行。</li>
         <li>所有可行側的交集就是可行解區域，下圖的綠色多邊形。</li>
         <li>畫一條等利潤線 $3x_1 + 5x_2 = Z$，往利潤增加的方向（箭頭）平移；離開可行解區域前最後碰到的點，就是最佳解。</li>
@@ -234,8 +234,8 @@ print("Z* =", pulp.value(model.objective))
     <section id="references">
       <h2>延伸閱讀</h2>
       <ul class="refs">
-        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, McGraw-Hill, Chapter 3（Wyndor 例題出處）.</li>
-        <li>PuLP 官方文件：<a href="https://coin-or.github.io/pulp/">coin-or.github.io/pulp</a></li>
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, 10th ed., McGraw-Hill, Chapter 3（Wyndor 例題出處）.</li>
+        <li>PuLP 官方文件：<a href="https://www.coin-or.org/pulp/">www.coin-or.org/pulp</a></li>
       </ul>
     </section>
 

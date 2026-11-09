@@ -10,4 +10,4 @@
 - 新增課程一律先執行 `node scripts/new-lesson.mjs`，不要手動複製檔案。
 - 每次修改講義、樣式或元件之後，都要執行 `node scripts/check.mjs`，在回報完成前貼出它的結果。
 - 講義裡的 Python 程式要用 `pip install "pulp<4"` 的環境實際執行過，再把輸出貼進 `# 輸出：` 註解。
-- 只在使用者要求時 commit；commit 訊息照 AGENTS.md 第 13 節的格式。
+- 完成後依 AGENTS.md 第 10.1 節第 8 步與第 13 節的格式 commit；使用者說要先看過再提交時，就等確認後再 commit。

@@ -12,7 +12,7 @@
   --grid-strong: #c4d8e4;  /* 方格紙粗線、框線 */
   --ink: #1b2a41;          /* 主文字：藍黑墨水 */
   --ink-soft: #4f5f76;     /* 次要文字 */
-  --ink-faint: #7f8ea2;    /* 註解、刻度 */
+  --ink-faint: #5f6f85;    /* 註解、刻度（對比 ≥ 4.5:1） */
   --rule: #d6dee7;         /* 分隔線 */
   --blue: #1f5fad;         /* 原子筆藍：連結、定義 */
   --red: #b5382c;          /* 紅筆：最佳解、警告 */
@@ -46,7 +46,7 @@
     --grid-strong: #2a4f77;
     --ink: #e9eff6;
     --ink-soft: #b2c2d5;
-    --ink-faint: #8196ae;
+    --ink-faint: #8ca0b7;
     --rule: #2b4767;
     --blue: #92bdf1;
     --red: #ff8f7e;
