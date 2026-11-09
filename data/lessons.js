@@ -46,5 +46,14 @@ window.LESSONS = [
     "level": 2,
     "minutes": 20,
     "tags": ["排程", "派工法則", "甘特圖"]
+  },
+  {
+    "id": "06-transportation",
+    "title": "運輸問題",
+    "en": "The Transportation Problem",
+    "summary": "用中央廚房配送茶湯的例子建立運輸問題模型，學會西北角法、最小成本法與 u-v 法，找出總運費最低的配送計畫。",
+    "level": 2,
+    "minutes": 40,
+    "tags": ["線性規劃", "建模", "演算法", "PuLP"]
   }
 ];

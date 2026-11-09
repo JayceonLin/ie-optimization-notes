@@ -469,7 +469,8 @@ ol.process p { color: var(--ink-soft); margin: 0; font-size: 0.97rem; }
   body[data-page="lesson"] .topnav .hide-lesson-sm { display: none; }
   .brand span { font-size: 1rem; }
   .brand svg { width: 26px; height: 26px; }
-  .table-wrap table { min-width: 30rem; }
+  .table-wrap th, .table-wrap td { padding: 0.4rem 0.45rem; }
+  .table-wrap table.tableau { min-width: 30rem; }
   .example { padding: 1rem 1.05rem; }
   .pager { grid-template-columns: 1fr; }
   .pager .next { grid-column: 1; }

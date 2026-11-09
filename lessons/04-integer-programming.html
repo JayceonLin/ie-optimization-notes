@@ -168,7 +168,7 @@ model.solve(pulp.PULP_CBC_CMD(msg=False))
 chosen = [k for k in projects if y[k].value() &gt; 0.5]
 print("投資專案：", chosen)
 print("總淨現值：", pulp.value(model.objective))
-# 輸出（不含依賴限制）：
+# 輸出：（不含依賴限制）
 # 投資專案： ['B', 'C', 'D']
 # 總淨現值： 21.0</code></pre>
     </section>

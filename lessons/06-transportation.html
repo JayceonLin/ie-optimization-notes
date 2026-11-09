@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 6 課：運輸問題｜工工最佳化講義</title>
+  <meta name="description" content="用中央廚房配送茶湯的例子建立運輸問題模型，學會西北角法、最小成本法與 u-v 法，找出總運費最低的配送計畫。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="06-transportation">
+  <!-- 不要寫 <h1>、頂端列、側邊欄、上一課/下一課：site.js 會依 data/lessons.js 自動產生（AGENTS.md 第 5 節） -->
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>寫出運輸問題的線性規劃模型，並說出它有幾個決策變數與限制式。</li>
+        <li>用虛擬供給點或虛擬需求點，把供需不平衡的問題改成平衡問題。</li>
+        <li>用西北角法與最小成本法找出起始解。</li>
+        <li>用 u-v 法算出改善指標，判斷目前的解是不是最佳解，並沿閉路調整運量。</li>
+        <li>用 PuLP 求解運輸問題。</li>
+      </ul>
+    </section>
+
+    <section id="model">
+      <h2>運輸問題的模型</h2>
+      <p>工廠要把產品送到各地的倉庫，中央廚房要把食材送到各家門市。這類問題的形狀都一樣：有幾個出貨的地方，每個地方能送出的量有上限；有幾個收貨的地方，每個地方需要的量是固定的；每條路線每單位的運費都不同。要決定的是<mark>每條路線各送多少</mark>，讓總運費最低。</p>
+      <div class="definition">
+        <p class="box-title">定義：運輸問題（transportation problem）</p>
+        <p>有 $m$ 個<strong>供給點</strong>（source）與 $n$ 個<strong>需求點</strong>（destination）。供給點 $i$ 最多能送出 $S_i$ 單位，稱為<strong>供給量</strong>（supply）；需求點 $j$ 需要 $D_j$ 單位，稱為<strong>需求量</strong>（demand）；從 $i$ 運 1 單位到 $j$ 的成本是 $c_{ij}$。決策變數 $x_{ij}$ 是從供給點 $i$ 運到需求點 $j$ 的量。</p>
+      </div>
+      <p>目標是總運費最小。第一組限制式是供給：每個供給點送出的量不能超過供給量；第二組是需求：每個需求點收到的量要剛好等於需求量。</p>
+      <div class="model">
+        $$\begin{aligned}
+        \min \quad & Z = \sum_{i=1}^{m} \sum_{j=1}^{n} c_{ij} x_{ij} \\
+        \text{s.t.} \quad & \sum_{j=1}^{n} x_{ij} \le S_i, \quad i = 1, \dots, m \\
+        & \sum_{i=1}^{m} x_{ij} = D_j, \quad j = 1, \dots, n \\
+        & x_{ij} \ge 0, \quad \text{所有 } i, j
+        \end{aligned}$$
+      </div>
+      <p>這是一個線性規劃：有 $m \times n$ 個決策變數、$m + n$ 條限制式。它的結構很特別：每個變數 $x_{ij}$ 剛好出現在一條供給式和一條需求式裡，係數都是 1。因為這個結構，單形法可以簡化成直接在表格上加減的版本，也就是本課後半段的作法。</p>
+      <p>供給量與需求量用大寫的 $S_i$、$D_j$，是為了和第 3 課的寬鬆變數 $s_i$、第 5 課的交期 $d_j$ 區分。</p>
+      <div class="callout tip">
+        <p class="box-title">不需要整數規劃</p>
+        <p>運送的桶數、箱數應該是整數，但運輸問題不必用第 4 課的整數規劃。只要每個 $S_i$、$D_j$ 都是整數，運輸問題的每個基本可行解都是整數，單形法找到的最佳解自然也是整數。</p>
+      </div>
+    </section>
+
+    <section id="balancing">
+      <h2>供需平衡與虛擬點</h2>
+      <p>如果所有供給量加起來剛好等於所有需求量，也就是 $\sum_i S_i = \sum_j D_j$，這個問題叫做<strong>平衡運輸問題</strong>（balanced transportation problem）。這時每個供給點都必須全部送完，供給式的「$\le$」可以改成「$=$」。本課的起始解與最佳性檢查都從平衡問題開始。</p>
+      <p>供需不平衡時，加一個虛構的點把差額補上，讓問題變成平衡：</p>
+      <div class="table-wrap">
+        <table>
+          <caption>表 6-1　供需不平衡時的處理方式</caption>
+          <thead><tr><th scope="col">情況</th><th scope="col">加入</th><th scope="col">虛擬點的量</th><th scope="col">虛擬點的運量代表</th></tr></thead>
+          <tbody>
+            <tr><td>總供給大於總需求</td><td>虛擬需求點（dummy destination）</td><td>需求量 = 總供給 − 總需求</td><td>供給點沒有用到的產能</td></tr>
+            <tr><td>總供給小於總需求</td><td>虛擬供給點（dummy source）</td><td>供給量 = 總需求 − 總供給</td><td>需求點缺貨的量</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>虛擬點的運費設為 0，因為那些量實際上沒有被運送。如果缺貨會造成損失，你也可以把虛擬供給點的運費改成每單位的缺貨成本，讓模型優先滿足缺貨損失大的需求點。</p>
+      <div class="callout warn">
+        <p class="box-title">常見錯誤</p>
+        <p>供需不平衡時，直接把所有限制式都寫成等式。例如總供給 110 桶、總需求 100 桶，供給式要求一共送出 110 桶，需求式卻只收 100 桶，模型無可行解。先加虛擬點讓供需相等，再把限制式寫成等式。</p>
+      </div>
+    </section>
+
+    <section id="initial-solution">
+      <h2>起始解：西北角法與最小成本法</h2>
+      <p>求解運輸問題時，習慣把資料排成一張<strong>運輸表</strong>（transportation tableau）：每一列是一個供給點，每一欄是一個需求點，格子 $(i, j)$ 填運量 $x_{ij}$。一個可行解就是一種填法，讓每一列的和等於該列的供給量、每一欄的和等於該欄的需求量。</p>
+      <p>平衡運輸問題的基本可行解剛好有 $m + n - 1$ 個基變數，也就是表中填了數字的格子；沒有填數字的格子叫做<strong>空格</strong>，是運量為 0 的非基變數。少一個的原因是 $m + n$ 條限制式裡有一條是多餘的：所有供給式相加，和所有需求式相加，得到的是同一條式子。</p>
+      <p>單形法要從一個基本可行解出發，下面兩種方法都能直接在表上找到一個。</p>
+
+      <h3>西北角法</h3>
+      <p>西北角法（northwest corner method）只看格子的位置，不看運費：</p>
+      <ol class="steps">
+        <li>從左上角，也就是「西北角」的格子 $(1, 1)$ 開始。</li>
+        <li>在目前的格子填入「該列剩下的供給量」與「該欄剩下的需求量」中較小的那一個。</li>
+        <li>這一列的供給用完就往下移一列；這一欄的需求滿足了就往右移一欄。</li>
+        <li>重複步驟 2、3，直到填完右下角。</li>
+      </ol>
+      <p>西北角法很快，但因為完全不看運費，得到的解通常離最佳解很遠。</p>
+
+      <h3>最小成本法</h3>
+      <p>最小成本法（least cost method）每次都先填最便宜的路線：</p>
+      <ol class="steps">
+        <li>在還沒被劃掉的格子中，挑單位運費 $c_{ij}$ 最低的一格。</li>
+        <li>填入該列剩下的供給量與該欄剩下的需求量中較小的那一個。</li>
+        <li>供給用完的那一列，或需求滿足的那一欄，整條劃掉。</li>
+        <li>重複步驟 1 到 3，直到所有供給與需求都分配完。</li>
+      </ol>
+      <p>最小成本法通常比西北角法好很多。但它每一步只顧眼前最便宜的格子，最後常被迫用上很貴的路線，所以得到的仍然只是起始解，例題 6-1 會看到這個情況。</p>
+      <p>還有一個特殊情況：填完某一格後，該列的供給與該欄的需求同時用完。這時只劃掉其中一條，另一條留下來，之後會在它上面填一個運量為 0 的基變數，讓填了數字的格子仍然是 $m + n - 1$ 個。這種情況叫做<strong>退化</strong>（degeneracy）。</p>
+    </section>
+
+    <section id="optimality">
+      <h2>最佳性檢查：u-v 法</h2>
+      <p>有了起始解，接下來要問：還能不能更便宜？u-v 法（u-v method），也叫修正分配法（MODI），替每個供給點找一個數字 $u_i$、每個需求點找一個數字 $v_j$，讓每個基變數格子的運費剛好拆成這兩部分：</p>
+      $$u_i + v_j = c_{ij} \quad \text{（每個基變數格子）}$$
+      <p>基變數格子有 $m + n - 1$ 個，未知數有 $m + n$ 個，少一條式子，所以先令 $u_1 = 0$，其餘就能依序解出來。接著對每個空格計算改善指標：</p>
+      <div class="definition">
+        <p class="box-title">定義：改善指標（improvement index）</p>
+        <p>空格 $(i, j)$ 的改善指標是 $c_{ij} - u_i - v_j$，代表在這個空格多運 1 單位、並調整其他格子讓供需維持平衡之後，總運費的變化量。它和第 3 課單形表 Z 列裡非基變數的係數是同一個概念。</p>
+      </div>
+      <p>改善指標是負的，代表改走這條路線可以省錢。<mark>所有空格的改善指標都不是負數時，目前的解就是最佳解</mark>。否則依下列步驟調整：</p>
+      <ol class="steps">
+        <li><strong>選進入格：</strong>挑改善指標最負的空格，它的運量要從 0 開始增加。</li>
+        <li><strong>找閉路：</strong>從進入格出發，水平、垂直交替移動，只在基變數格子轉彎，最後回到進入格。這條路線叫做<strong>閉路</strong>（closed loop），對一個進入格來說閉路只有一條。</li>
+        <li><strong>標上正負：</strong>從進入格開始，沿閉路依序標上 $+\theta$、$-\theta$、$+\theta$、$-\theta$……這樣每一列、每一欄的加減剛好抵銷，供需仍然平衡。</li>
+        <li><strong>決定 $\theta$：</strong>運量不能變成負的，所以 $\theta$ 取所有 $-\theta$ 格子中最小的運量。</li>
+        <li><strong>更新：</strong>依正負加減 $\theta$，運量變成 0 的那一格離開，成為空格。回到開頭重新計算 $u_i$、$v_j$。</li>
+      </ol>
+      <p>每調整一次，總運費會改變「改善指標 × $\theta$」，因為改善指標是負的，所以是減少。這其實就是單形法的一次轉軸：進入格是進入變數，運量變成 0 的格子是離開變數。</p>
+    </section>
+
+    <section id="example">
+      <h2>例題：中央廚房的茶湯配送</h2>
+      <div class="example">
+        <p class="box-title">例題 6-1：中央廚房的茶湯配送</p>
+        <p><a href="01-what-is-optimization.html#example">例題 1-1</a> 的手搖飲店開成連鎖店之後，茶湯改由三間中央廚房 A、B、C 統一煮好，每天早上裝桶送到三家門市。各廚房每天最多能煮的桶數、各門市每天需要的桶數，以及每條路線每桶的運費如下表。每間廚房各送幾桶到每家門市，每天的總運費最低？</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">運費（元／桶）</th><th scope="col">門市 1</th><th scope="col">門市 2</th><th scope="col">門市 3</th><th scope="col">供給量（桶）</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">廚房 A</th><td>18</td><td>6</td><td>8</td><td>40</td></tr>
+              <tr><th scope="row">廚房 B</th><td>10</td><td>17</td><td>7</td><td>30</td></tr>
+              <tr><th scope="row">廚房 C</th><td>5</td><td>15</td><td>14</td><td>30</td></tr>
+              <tr><th scope="row">需求量（桶）</th><td>35</td><td>25</td><td>40</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p><strong>建模：</strong>令 $x_{ij}$ 為廚房 $i$ 每天送到門市 $j$ 的桶數，$i \in \{A, B, C\}$，$j \in \{1, 2, 3\}$。總供給 $40 + 30 + 30 = 100$ 桶，等於總需求 $35 + 25 + 40 = 100$ 桶，是平衡問題，所有限制式都寫成等式。前三條限制式是三間廚房的供給，後三條是三家門市的需求：</p>
+          $$\begin{aligned}
+          \min \quad & Z = 18x_{A1} + 6x_{A2} + 8x_{A3} \\
+          & \phantom{Z = {}} + 10x_{B1} + 17x_{B2} + 7x_{B3} \\
+          & \phantom{Z = {}} + 5x_{C1} + 15x_{C2} + 14x_{C3} \\
+          \text{s.t.} \quad & x_{A1} + x_{A2} + x_{A3} = 40 \\
+          & x_{B1} + x_{B2} + x_{B3} = 30 \\
+          & x_{C1} + x_{C2} + x_{C3} = 30 \\
+          & x_{A1} + x_{B1} + x_{C1} = 35 \\
+          & x_{A2} + x_{B2} + x_{C2} = 25 \\
+          & x_{A3} + x_{B3} + x_{C3} = 40 \\
+          & x_{ij} \ge 0
+          \end{aligned}$$
+          <p><strong>起始解：</strong>用最小成本法，下面用「A → 門市 2」表示廚房 A 送到門市 2 的路線。最便宜的是 C → 門市 1（5 元），填 $\min(30, 35) = 30$，廚房 C 用完；接著是 A → 門市 2（6 元），填 $\min(40, 25) = 25$，門市 2 滿足；再來是 B → 門市 3（7 元），填 $\min(30, 40) = 30$，廚房 B 用完；剩下的格子裡最便宜的是 A → 門市 3（8 元），填 $\min(15, 10) = 10$，門市 3 滿足；最後只剩 A → 門市 1，填 5。結果如表 6-2，單位是桶，空白的是空格。</p>
+          <div class="table-wrap">
+            <table>
+              <caption>表 6-2　最小成本法的起始解</caption>
+              <thead><tr><th scope="col"></th><th scope="col">門市 1</th><th scope="col">門市 2</th><th scope="col">門市 3</th><th scope="col">供給量</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">廚房 A</th><td>5</td><td>25</td><td>10</td><td>40</td></tr>
+                <tr><th scope="row">廚房 B</th><td></td><td></td><td>30</td><td>30</td></tr>
+                <tr><th scope="row">廚房 C</th><td>30</td><td></td><td></td><td>30</td></tr>
+                <tr><th scope="row">需求量</th><td>35</td><td>25</td><td>40</td><td>100</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>填了 5 格，等於 $m + n - 1 = 3 + 3 - 1$，沒有退化。總運費 $5 \times 18 + 25 \times 6 + 10 \times 8 + 30 \times 7 + 30 \times 5 = 680$ 元。</p>
+          <p><strong>最佳性檢查：</strong>令 $u_A = 0$。由 A 列的三個基變數格子得到 $v_1 = 18$、$v_2 = 6$、$v_3 = 8$；由 B → 門市 3 得 $u_B = 7 - 8 = -1$；由 C → 門市 1 得 $u_C = 5 - 18 = -13$。四個空格的改善指標如下：</p>
+          <div class="table-wrap">
+            <table>
+              <caption>表 6-3　起始解的改善指標</caption>
+              <thead><tr><th scope="col">空格</th><th scope="col">$c_{ij} - u_i - v_j$</th><th scope="col">改善指標</th></tr></thead>
+              <tbody>
+                <tr><td>B → 門市 1</td><td>$10 - (-1) - 18$</td><td>$-7$</td></tr>
+                <tr><td>B → 門市 2</td><td>$17 - (-1) - 6$</td><td>$12$</td></tr>
+                <tr><td>C → 門市 2</td><td>$15 - (-13) - 6$</td><td>$22$</td></tr>
+                <tr><td>C → 門市 3</td><td>$14 - (-13) - 8$</td><td>$19$</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>B → 門市 1 的改善指標是 $-7$：改由廚房 B 送 1 桶到門市 1，每天可以省 7 元，所以目前的解不是最佳解。</p>
+          <p><strong>閉路調整：</strong>B → 門市 1 進入。閉路是 B → 門市 1（$+\theta$）、B → 門市 3（$-\theta$）、A → 門市 3（$+\theta$）、A → 門市 1（$-\theta$），再回到 B → 門市 1。標 $-\theta$ 的兩格運量是 30 與 5，所以 $\theta = 5$，A → 門市 1 降為 0 而離開。調整後的運送計畫如表 6-4：</p>
+          <div class="table-wrap">
+            <table>
+              <caption>表 6-4　調整一次後的運送計畫</caption>
+              <thead><tr><th scope="col"></th><th scope="col">門市 1</th><th scope="col">門市 2</th><th scope="col">門市 3</th><th scope="col">供給量</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">廚房 A</th><td></td><td>25</td><td>15</td><td>40</td></tr>
+                <tr><th scope="row">廚房 B</th><td>5</td><td></td><td>25</td><td>30</td></tr>
+                <tr><th scope="row">廚房 C</th><td>30</td><td></td><td></td><td>30</td></tr>
+                <tr><th scope="row">需求量</th><td>35</td><td>25</td><td>40</td><td>100</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>總運費變成 $680 + (-7) \times 5 = 645$ 元。直接計算也一樣：$25 \times 6 + 15 \times 8 + 5 \times 10 + 25 \times 7 + 30 \times 5 = 645$。</p>
+          <p><strong>再檢查一次：</strong>令 $u_A = 0$，由 A → 門市 2、A → 門市 3 得 $v_2 = 6$、$v_3 = 8$；由 B → 門市 3 得 $u_B = -1$；由 B → 門市 1 得 $v_1 = 10 - (-1) = 11$；由 C → 門市 1 得 $u_C = 5 - 11 = -6$。四個空格的改善指標如下：</p>
+          <div class="table-wrap">
+            <table>
+              <caption>表 6-5　調整後的改善指標</caption>
+              <thead><tr><th scope="col">空格</th><th scope="col">$c_{ij} - u_i - v_j$</th><th scope="col">改善指標</th></tr></thead>
+              <tbody>
+                <tr><td>A → 門市 1</td><td>$18 - 0 - 11$</td><td>$7$</td></tr>
+                <tr><td>B → 門市 2</td><td>$17 - (-1) - 6$</td><td>$12$</td></tr>
+                <tr><td>C → 門市 2</td><td>$15 - (-6) - 6$</td><td>$15$</td></tr>
+                <tr><td>C → 門市 3</td><td>$14 - (-6) - 8$</td><td>$12$</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>改善指標全部是正的，所以表 6-4 就是最佳解，而且沒有其他同樣便宜的解。</p>
+          <p><strong>答案的意思：</strong>廚房 A 送 25 桶到門市 2、15 桶到門市 3；廚房 B 送 5 桶到門市 1、25 桶到門市 3；廚房 C 的 30 桶全部送到門市 1。起始解為了補滿門市 1，用了最貴的 A → 門市 1（18 元）；調整後改由 B 補這 5 桶（10 元），B 少送門市 3 的 5 桶再由 A 補上（8 元），每桶淨省 $18 - 10 + 7 - 8 = 7$ 元。每天的最低總運費是 645 元。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="python">
+      <h2>用 Python 求解</h2>
+      <p>實務上的運輸問題可能有上百個供給點與需求點，這時就交給求解器。PuLP 的寫法和第 2 課相同，只是變數改成兩層字典 <code>x[i][j]</code>。變數宣告成連續變數即可，求出的運量自然是整數：</p>
+<pre><code class="language-python"># 例題 6-1：中央廚房的茶湯配送（安裝：pip install "pulp&lt;4"）
+import pulp
+
+kitchens = ["A", "B", "C"]       # 供給點 i：中央廚房
+stores = ["1", "2", "3"]         # 需求點 j：門市
+S = {"A": 40, "B": 30, "C": 30}  # 供給量 S_i（桶／天）
+D = {"1": 35, "2": 25, "3": 40}  # 需求量 D_j（桶／天）
+c = {                            # 單位運費 c_ij（元／桶）
+    "A": {"1": 18, "2": 6, "3": 8},
+    "B": {"1": 10, "2": 17, "3": 7},
+    "C": {"1": 5, "2": 15, "3": 14},
+}
+
+model = pulp.LpProblem("Transportation", pulp.LpMinimize)
+
+# 決策變數 x_ij：廚房 i 每天送到門市 j 的桶數（連續變數即可）
+x = pulp.LpVariable.dicts("x", (kitchens, stores), lowBound=0)
+
+# 目標函數：每天的總運費（元）
+model += pulp.lpSum(c[i][j] * x[i][j]
+                    for i in kitchens for j in stores), "TotalCost"
+
+# 限制式：供需平衡，供給與需求都寫成等式
+for i in kitchens:
+    model += pulp.lpSum(x[i][j] for j in stores) == S[i], "Supply_" + i
+for j in stores:
+    model += pulp.lpSum(x[i][j] for i in kitchens) == D[j], "Demand_" + j
+
+model.solve(pulp.PULP_CBC_CMD(msg=False))
+
+print("狀態：", pulp.LpStatus[model.status])
+for i in kitchens:
+    for j in stores:
+        if x[i][j].value() &gt; 0:
+            print(f"廚房 {i} → 門市 {j}：{x[i][j].value()} 桶")
+print("Z* =", pulp.value(model.objective))
+# 輸出：
+# 狀態： Optimal
+# 廚房 A → 門市 2：25.0 桶
+# 廚房 A → 門市 3：15.0 桶
+# 廚房 B → 門市 1：5.0 桶
+# 廚房 B → 門市 3：25.0 桶
+# 廚房 C → 門市 1：30.0 桶
+# Z* = 645.0</code></pre>
+      <p>PuLP 的答案和手算的表 6-4 相同。</p>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>運輸問題要決定每條路線的運量 $x_{ij}$，讓總運費最低；它是限制式係數都是 0 或 1 的線性規劃。</li>
+        <li>總供給等於總需求才是平衡問題；不平衡時加一個運費為 0 的虛擬需求點或虛擬供給點補足差額。</li>
+        <li>平衡問題的基本可行解有 $m + n - 1$ 個基變數；起始解可用西北角法（不看運費）或最小成本法（先填最便宜的格子）。</li>
+        <li>u-v 法：由基變數格子的 $u_i + v_j = c_{ij}$ 解出 $u_i$、$v_j$，空格的改善指標 $c_{ij} - u_i - v_j$ 都不是負數時就是最佳解。</li>
+        <li>有負的改善指標時，沿閉路加減 $\theta$ 調整運量，這就是單形法的一次轉軸。</li>
+        <li>供給量與需求量都是整數時，最佳解自動是整數，直接用 PuLP 當線性規劃求解即可。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 6-1</span>某公司有 4 座工廠、6 個配銷中心，供需平衡。這個運輸問題有幾個決策變數、幾條供需限制式？一個基本可行解有幾個基變數？為什麼基變數的個數不等於限制式的條數？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>決策變數 $4 \times 6 = 24$ 個，供需限制式 $4 + 6 = 10$ 條（不含非負限制），基變數 $4 + 6 - 1 = 9$ 個。供需平衡時，4 條供給式相加與 6 條需求式相加都是「總運量 = 總供給 = 總需求」，所以 10 條限制式裡有 1 條可以由其他 9 條推出來，真正獨立的只有 9 條，基變數也就只有 9 個。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 6-2</span>用西北角法求例題 6-1 的起始解，算出每天的總運費，並和最小成本法的起始解、最佳解比較。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>從 A → 門市 1 開始，填 $\min(40, 35) = 35$，門市 1 滿足，往右；A → 門市 2 填 $\min(5, 25) = 5$，廚房 A 用完，往下；B → 門市 2 填 $\min(30, 20) = 20$，門市 2 滿足，往右；B → 門市 3 填 $\min(10, 40) = 10$，廚房 B 用完，往下；C → 門市 3 填 30。共 5 個基變數，等於 $3 + 3 - 1$。</p>
+          <p>總運費 $35 \times 18 + 5 \times 6 + 20 \times 17 + 10 \times 7 + 30 \times 14 = 630 + 30 + 340 + 70 + 420 = 1{,}490$ 元，是最小成本法起始解 680 元的兩倍多，比最佳解 645 元多 845 元。西北角法只照位置填，才會用上 A → 門市 1（18 元）與 B → 門市 2（17 元）這兩條最貴的路線。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 6-3</span>廚房 C 換了大鍋，每天最多可以煮 40 桶，其他資料和例題 6-1 相同。請把問題改成平衡問題，求出最佳運送計畫與每天的總運費。哪幾間廚房的產能沒有用完？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>總供給 $40 + 30 + 40 = 110$ 桶，總需求 100 桶，供給多 10 桶。加一個虛擬門市 4，需求量 10 桶，三間廚房送到門市 4 的運費都是 0。</p>
+          <p>最佳解是：廚房 A 送 25 桶到門市 2、10 桶到門市 3；廚房 B 送 30 桶到門市 3；廚房 C 送 35 桶到門市 1；虛擬門市 4 收到 A 的 5 桶與 C 的 5 桶，也就是廚房 A、C 各有 5 桶產能沒有用到。總運費 $35 \times 5 + 25 \times 6 + 10 \times 8 + 30 \times 7 = 615$ 元，比例題 6-1 每天省 30 元。</p>
+          <p>用 u-v 法驗證：令 $u_A = 0$，依序得到 $v_2 = 6$、$v_3 = 8$、$v_4 = 0$、$u_B = -1$、$u_C = 0$、$v_1 = 5$。六個空格的改善指標分別是 A → 門市 1 為 13、B → 門市 1 為 6、B → 門市 2 為 12、B → 門市 4 為 1、C → 門市 2 為 9、C → 門市 3 為 6，全部是正的，所以這是最佳解。</p>
+          <p>廚房 C 多出的 10 桶只用了 5 桶，因為門市 1 只要 35 桶，而 C 送到門市 2、3 的運費太高。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 6-4</span>道路施工可能讓某條路線暫停。不重新求解，判斷例題 6-1 在下列情況的最佳解與每天的總運費：(a) C → 門市 3 不能走；(b) B → 門市 1 不能走。（提示：不能走的路線可以把運費設成很大的 $M$。）</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>(a) 表 6-4 的最佳解本來就沒有用 C → 門市 3。把它的運費改成 $M$，表 6-4 仍然可行，其他格子的 $u_i$、$v_j$ 都不變，C → 門市 3 的改善指標變成 $M + 6 - 8$，仍然是正的。所以最佳解不變，總運費仍是 645 元。</p>
+          <p>(b) 表 6-4 用了 B → 門市 1 的 5 桶，現在不能用了。回到表 6-2 的起始解：它沒有用 B → 門市 1，而表 6-3 裡唯一為負的改善指標正是 B → 門市 1。把這格的運費改成 $M$ 後，它的改善指標變成 $M + 1 - 18$，是正的；其他三個空格是 12、22、19，也都是正的。所以表 6-2 的起始解就是新的最佳解，總運費 680 元，每天比原本多 35 元。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>F. S. Hillier and G. J. Lieberman, <cite>Introduction to Operations Research</cite>, 10th ed., McGraw-Hill, Chapter 9（運輸問題與指派問題）.</li>
+        <li>H. A. Taha, <cite>Operations Research: An Introduction</cite>, 10th ed., Pearson, Chapter 5（運輸模型及其變形）.</li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>

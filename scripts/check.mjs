@@ -197,6 +197,11 @@ for (const l of lessons) {
     if (!/^<code class="language-[a-z]+">[\s\S]*<\/code>$/.test(inner)) err("R11", file, '程式碼必須寫成 <pre><code class="language-語言">…</code></pre>');
     const code = inner.replace(/^<code[^>]*>/, "").replace(/<\/code>$/, "");
     if (/[<>]/.test(code)) err("R11", file, "程式碼裡的 < 與 > 必須寫成 &lt; 與 &gt;");
+    if (/&(?!(lt|gt|amp|quot|#\d+);)/.test(code)) err("R11", file, "程式碼裡的 & 必須寫成 &amp;");
+    if (/^<code class="language-python">/.test(inner)) {
+      if (!code.startsWith(`# 例題 ${n}-`)) err("R11", file, `Python 程式的第一行必須是「# 例題 ${n}-k：…（安裝：…）」註解`);
+      if (!code.includes("# 輸出：")) err("R11", file, "Python 程式最後要用「# 輸出：」註解貼上實際執行結果");
+    }
   }
 }
 
@@ -207,7 +212,7 @@ const banned = ["讓我們", "總而言之", "！", "!"];
 for (const row of w2.split("\n")) {
   const cells = row.split("|").map((c) => c.trim());
   if (cells.length < 5 || cells[1] === "English" || /^-+$/.test(cells[1])) continue;
-  const word = cells[3].split("（")[0].trim();
+  const word = cells[3].split(/[（(]/)[0].trim();
   if (word) banned.push(word);
 }
 function proseOf(html) {
@@ -233,6 +238,13 @@ else {
   const home = read("index.html");
   if (!/<body data-page="home">/.test(home)) err("R12", "index.html", '首頁必須是 <body data-page="home">');
   if (!/id="lesson-list"/.test(home)) err("R12", "index.html", '首頁必須保留 <ol class="syllabus" id="lesson-list">，課程目錄由 site.js 產生');
+}
+if (exists("README.md")) {
+  const readme = read("README.md");
+  for (const l of lessons) {
+    if (!ID_PATTERN.test(l.id || "")) continue;
+    if (!readme.includes(`| ${numOf(l.id)} | ${l.title} |`)) err("R12", "README.md", `「目前的課程」表缺少「| ${numOf(l.id)} | ${l.title} |」這一列`);
+  }
 }
 
 // ---------- R13：顏色只能用 CSS 變數 ----------

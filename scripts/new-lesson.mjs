@@ -50,7 +50,7 @@ lessons.push({
   id,
   title,
   en,
-  summary: "TODO：用一句話說明這一課學到什麼（20 到 60 字）",
+  summary: "TODO：說明這一課學到什麼，15 到 70 字，以「。」結尾",
   level: opts.level,
   minutes: opts.minutes,
   tags: []
@@ -63,3 +63,4 @@ console.log(`  1. 在 data/lessons.js 填好這一課的 summary 與 tags（1 �
 console.log(`  2. 依 AGENTS.md 第 5 到 7 節，把 lessons/${id}.html 裡所有 TODO 換成內容`);
 console.log(`  3. 把 <meta name="description"> 改成和 summary 一模一樣的文字`);
 console.log(`  4. 執行 node scripts/check.mjs，直到顯示「全部通過」`);
+console.log(`  5. 更新 README.md 的「目前的課程」表（AGENTS.md 第 10.1 節第 8 步）`);
