@@ -64,7 +64,7 @@ for (const l of lessons) {
   if (!ID_PATTERN.test(l.id || "")) continue;
   const file = `lessons/${l.id}.html`;
   if (!exists(file)) { err("R2", file, "data/lessons.js 有登記，但檔案不存在"); continue; }
-  const html = read(file);
+  const html = read(file).replace(/<!--[\s\S]*?-->/g, ""); // 註解不檢查
   const n = numOf(l.id);
 
   // R10：未完成

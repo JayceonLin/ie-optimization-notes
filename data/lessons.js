@@ -37,5 +37,14 @@ window.LESSONS = [
     "level": 2,
     "minutes": 25,
     "tags": ["整數規劃", "0-1 變數", "分支界限法", "PuLP"]
+  },
+  {
+    "id": "05-scheduling",
+    "title": "機器排程",
+    "en": "Machine Scheduling",
+    "summary": "用 SPT、EDD 與 Johnson 法則排出工件順序，並用甘特圖比較不同排法的績效。",
+    "level": 2,
+    "minutes": 20,
+    "tags": ["排程", "派工法則", "甘特圖"]
   }
 ];

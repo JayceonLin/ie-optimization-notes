@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 5 課：機器排程｜工工最佳化講義</title>
+  <meta name="description" content="用 SPT、EDD 與 Johnson 法則排出工件順序，並用甘特圖比較不同排法的績效。">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&amp;display=swap">
+  <link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script defer src="../assets/vendor/katex/katex.min.js"></script>
+  <script defer src="../assets/vendor/katex/auto-render.min.js"></script>
+  <script defer src="../data/lessons.js"></script>
+  <script defer src="../assets/js/site.js"></script>
+</head>
+<body data-page="lesson" data-lesson="05-scheduling">
+  <!-- 不要寫 <h1>、頂端列、側邊欄、上一課/下一課：site.js 會依 data/lessons.js 自動產生（AGENTS.md 第 5 節） -->
+  <article class="lesson">
+
+    <section id="goals">
+      <h2>學習目標</h2>
+      <p>讀完這一課，你應該能夠：</p>
+      <ul>
+        <li>用處理時間、交期、完工時間等符號描述一個排程問題與它的績效指標。</li>
+        <li>說出 SPT 與 EDD 法則各自能讓哪一個指標達到最佳。</li>
+        <li>用 Johnson 法則排出兩機流程工廠的工件順序。</li>
+        <li>讀懂甘特圖，並比較不同順序的績效。</li>
+      </ul>
+    </section>
+
+    <section id="notation">
+      <h2>排程問題的基本符號</h2>
+      <p>工廠接到一批訂單，每張訂單是一個<strong>工件</strong>（job），機器一次只能加工一個工件，而且開始做就不中斷。要決定的只有一件事：<mark>工件的先後順序</mark>。</p>
+      <p>聽起來簡單，但 $n$ 個工件就有 $n!$ 種順序：10 個工件已經有 3,628,800 種。排程屬於第 1 課提到的組合最佳化，常用的做法是找出「照某個規則排就保證最佳」的派工法則。</p>
+      <div class="table-wrap">
+        <table>
+          <caption>表 5-1　排程的符號與績效指標</caption>
+          <thead><tr><th scope="col">符號</th><th scope="col">意思</th></tr></thead>
+          <tbody>
+            <tr><td>$p_j$</td><td>工件 $j$ 的處理時間（processing time）；多台機器時，$p_{kj}$ 是工件 $j$ 在機器 $k$ 的處理時間</td></tr>
+            <tr><td>$d_j$</td><td>工件 $j$ 的交期（due date）</td></tr>
+            <tr><td>$C_j$</td><td>工件 $j$ 的完工時間（completion time），由排出來的順序決定</td></tr>
+            <tr><td>$L_j = C_j - d_j$</td><td>延遲（lateness）；提早完成時是負的</td></tr>
+            <tr><td>$C_{\max} = \max_j C_j$</td><td>最大完工時間（makespan），也就是整批工作做完的時間</td></tr>
+            <tr><td>$\sum_j C_j$</td><td>完工時間總和；除以 $n$ 就是工件平均在系統裡等多久</td></tr>
+            <tr><td>$L_{\max} = \max_j L_j$</td><td>最大延遲，代表最嚴重的那張訂單晚了多少</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="definition">
+        <p class="box-title">定義：三欄位表示法（three-field notation）</p>
+        <p>排程問題常寫成 $\alpha \mid \beta \mid \gamma$：$\alpha$ 是機器環境（$1$ 代表單機、$F2$ 代表兩台機器的流程工廠），$\beta$ 是特殊限制（空白代表沒有），$\gamma$ 是要最小化的指標。例如 $1 \mid\mid \sum C_j$ 是「單機、最小化完工時間總和」。</p>
+      </div>
+    </section>
+
+    <section id="dispatching-rules">
+      <h2>單機的兩個派工法則</h2>
+      <p>單機問題有兩個經典結果，各自對應一個指標：</p>
+      <div class="definition">
+        <p class="box-title">定理：SPT 法則與 EDD 法則</p>
+        <p><strong>SPT</strong>（shortest processing time first）：處理時間最短的先做。這樣排能讓 $1 \mid\mid \sum C_j$ 達到最佳。<br>
+        <strong>EDD</strong>（earliest due date first）：交期最早的先做。這樣排能讓 $1 \mid\mid L_{\max}$ 達到最佳。</p>
+      </div>
+      <p>SPT 的直覺是：排在第一個的工件，它的處理時間會被後面每個工件「等一次」，所以短的放前面，大家等得最少。EDD 的直覺是：如果某兩個相鄰工件的交期順序排反了，把它們對調，最晚的那個延遲只會變小、不會變大。</p>
+      <div class="callout warn">
+        <p class="box-title">常見錯誤</p>
+        <p>以為有一個順序可以讓所有指標同時最好。SPT 與 EDD 最佳化的是不同的指標，排出來常常不一樣，要先問清楚「這次最在意什麼」。</p>
+      </div>
+    </section>
+
+    <section id="example">
+      <h2>例題：單機排程</h2>
+      <div class="example">
+        <p class="box-title">例題 5-1：四張訂單要先做哪一張</p>
+        <p>一台機器要加工 4 個工件，處理時間與交期如下（單位：小時）。請比較「照訂單編號」「SPT」「EDD」三種順序的完工時間總和 $\sum C_j$ 與最大延遲 $L_{\max}$。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">工件</th><th scope="col">J1</th><th scope="col">J2</th><th scope="col">J3</th><th scope="col">J4</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">處理時間 $p_j$</th><td>4</td><td>2</td><td>6</td><td>3</td></tr>
+              <tr><th scope="row">交期 $d_j$</th><td>5</td><td>12</td><td>10</td><td>8</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p>SPT 依處理時間由小到大：J2（2）、J4（3）、J1（4）、J3（6）。EDD 依交期由早到晚：J1（5）、J4（8）、J3（10）、J2（12）。逐一累加處理時間得到完工時間，再減去交期得到延遲：</p>
+          <div class="table-wrap">
+            <table>
+              <caption>表 5-2　三種順序的績效</caption>
+              <thead><tr><th scope="col">順序</th><th scope="col">完工時間 $C_j$</th><th scope="col">$\sum C_j$</th><th scope="col">$L_{\max}$</th></tr></thead>
+              <tbody>
+                <tr><td>訂單編號 J1 → J2 → J3 → J4</td><td>4, 6, 12, 15</td><td>37</td><td>7（J4）</td></tr>
+                <tr><td>SPT J2 → J4 → J1 → J3</td><td>2, 5, 9, 15</td><td><strong>31</strong></td><td>5（J3）</td></tr>
+                <tr><td>EDD J1 → J4 → J3 → J2</td><td>4, 7, 13, 15</td><td>39</td><td><strong>3</strong>（J3、J2）</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>想讓工件平均等待最短就用 SPT（$\sum C_j = 31$）；想讓最晚的訂單盡量不要太晚就用 EDD（$L_{\max} = 3$ 小時）。列舉全部 24 種順序可以確認，這兩個數字就是各自指標的最佳值。</p>
+        </div>
+      </div>
+
+      <figure class="widget" data-widget="gantt">
+        <script type="application/json">
+          {
+            "title": "例題 5-1 三種工件順序的單機甘特圖",
+            "machines": ["機器"],
+            "jobs": [
+              { "id": "J1", "p": [4], "d": 5 },
+              { "id": "J2", "p": [2], "d": 12 },
+              { "id": "J3", "p": [6], "d": 10 },
+              { "id": "J4", "p": [3], "d": 8 }
+            ],
+            "sequences": [
+              { "label": "訂單編號", "order": ["J1", "J2", "J3", "J4"] },
+              { "label": "SPT", "order": ["J2", "J4", "J1", "J3"] },
+              { "label": "EDD", "order": ["J1", "J4", "J3", "J2"] }
+            ],
+            "metrics": ["sumC", "lmax"]
+          }
+        </script>
+        <figcaption>圖 5-1　切換三種順序，看工件在時間軸上的位置與兩個指標怎麼變。注意不管怎麼排，最後都在第 15 小時做完。</figcaption>
+      </figure>
+    </section>
+
+    <section id="flow-shop">
+      <h2>兩台機器：Johnson 法則</h2>
+      <p>很多產品要依序經過兩道工序，例如先切削再研磨。每個工件都要先在機器 1 做完，才能上機器 2，兩台機器用同一個順序。這叫做兩機<strong>流程工廠</strong>（flow shop），目標通常是讓整批工作最早做完，也就是 $F2 \mid\mid C_{\max}$。</p>
+      <div class="definition">
+        <p class="box-title">定理：Johnson 法則（Johnson’s rule）</p>
+        <ol class="steps">
+          <li>把工件分成兩組：第一組是 $p_{1j} \le p_{2j}$ 的工件（在機器 1 比較快），第二組是 $p_{1j} \gt p_{2j}$ 的工件。</li>
+          <li>第一組依 $p_{1j}$ 由小到大，排在前面。</li>
+          <li>第二組依 $p_{2j}$ 由大到小，排在後面。</li>
+        </ol>
+        <p>這樣排出的順序可以讓 $F2 \mid\mid C_{\max}$ 達到最佳（S. M. Johnson，1954）。</p>
+      </div>
+      <p>直覺是：一開始讓機器 2 盡快有事做（第一組先上，而且機器 1 時間短的先），最後讓機器 2 收尾的時間盡量短（第二組裡機器 2 時間長的先做完）。</p>
+
+      <div class="example">
+        <p class="box-title">例題 5-2：切削與研磨</p>
+        <p>5 個工件都要先切削（機器 1）再研磨（機器 2），處理時間如下（單位：小時）。用 Johnson 法則排出順序，並求最大完工時間。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">工件</th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th><th scope="col">E</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">機器 1：$p_{1j}$</th><td>3</td><td>5</td><td>1</td><td>6</td><td>7</td></tr>
+              <tr><th scope="row">機器 2：$p_{2j}$</th><td>6</td><td>2</td><td>2</td><td>6</td><td>5</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="solution">
+          <p class="box-title">解</p>
+          <p><strong>分組：</strong>第一組（$p_{1j} \le p_{2j}$）是 A、C、D；第二組（$p_{1j} \gt p_{2j}$）是 B、E。D 的兩個時間相等，放哪一組結果都一樣。</p>
+          <p><strong>排序：</strong>第一組依機器 1 時間由小到大是 C（1）、A（3）、D（6）；第二組依機器 2 時間由大到小是 E（5）、B（2）。順序為 C → A → D → E → B。</p>
+          <p><strong>計算完工時間：</strong>機器 1 依序在 1、4、10、17、22 做完；機器 2 每個工件的開工時間是「它在機器 1 做完」與「機器 2 做完上一個」兩者中較晚的那個，依序在 3、10、16、22、24 做完。</p>
+          <p>最大完工時間 $C_{\max} = 24$ 小時。照字母順序 A → B → C → D → E 排則是 27 小時。</p>
+          <p><strong>驗證：</strong>機器 1 總共要做 22 小時，做完後機器 2 至少還要做最短的 2 小時；機器 2 總共要做 21 小時，而且至少要等機器 1 做完第一個工件的 1 小時。所以任何順序都有 $C_{\max} \ge \max(22 + 2,\ 21 + 1) = 24$，Johnson 法則達到了這個下界。</p>
+        </div>
+      </div>
+
+      <figure class="widget" data-widget="gantt">
+        <script type="application/json">
+          {
+            "title": "例題 5-2 兩機流程工廠的甘特圖",
+            "machines": ["機器 1", "機器 2"],
+            "jobs": [
+              { "id": "A", "p": [3, 6] },
+              { "id": "B", "p": [5, 2] },
+              { "id": "C", "p": [1, 2] },
+              { "id": "D", "p": [6, 6] },
+              { "id": "E", "p": [7, 5] }
+            ],
+            "sequences": [
+              { "label": "Johnson 法則", "order": ["C", "A", "D", "E", "B"] },
+              { "label": "字母順序", "order": ["A", "B", "C", "D", "E"] }
+            ],
+            "metrics": ["cmax"]
+          }
+        </script>
+        <figcaption>圖 5-2　切換兩種順序，觀察機器 2 中間出現的空檔。字母順序讓機器 2 多等了好幾次，所以晚了 3 小時才做完。</figcaption>
+      </figure>
+    </section>
+
+    <section id="summary">
+      <h2>重點整理</h2>
+      <ul class="key-points">
+        <li>排程要決定的是工件順序，$n$ 個工件有 $n!$ 種排法，常用派工法則求解。</li>
+        <li>SPT（處理時間短的先做）讓完工時間總和最小；EDD（交期早的先做）讓最大延遲最小。</li>
+        <li>沒有一個順序能讓所有指標同時最好，要先決定最在意的指標。</li>
+        <li>兩機流程工廠用 Johnson 法則：機器 1 快的工件依機器 1 時間由小到大排前面，其餘依機器 2 時間由大到小排後面。</li>
+        <li>甘特圖能直接看出機器的空檔，是檢查排程最快的方法。</li>
+      </ul>
+    </section>
+
+    <section id="exercises">
+      <h2>練習題</h2>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 5-1</span>例題 5-1 中，如果改成「交期最晚的先做」，$\sum C_j$ 與 $L_{\max}$ 會是多少？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>順序為 J2（12）→ J3（10）→ J4（8）→ J1（5），完工時間 2、8、11、15，$\sum C_j = 36$。延遲依序為 $-10$、$-2$、$3$、$10$，$L_{\max} = 10$ 小時。交期最早的 J1 被排到最後，延遲比 EDD 的 3 小時差很多。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 5-2</span>用 Johnson 法則排下列 4 個工件，並求最大完工時間。工件 W、X、Y、Z 在機器 1 的時間是 4、2、6、3，在機器 2 的時間是 3、5、4、7。</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>第一組（$p_{1j} \le p_{2j}$）是 X、Z，依機器 1 時間排成 X（2）、Z（3）；第二組是 W、Y，依機器 2 時間由大到小排成 Y（4）、W（3）。順序 X → Z → Y → W。</p>
+          <p>機器 1 依序在 2、5、11、15 做完；機器 2 依序在 7、14、18、21 做完，$C_{\max} = 21$。下界 $\max(15 + 3,\ 19 + 2) = 21$，確認是最佳。</p>
+        </div>
+      </details>
+      <details class="exercise">
+        <summary><span class="ex-no">練習 5-3</span>為什麼在例題 5-1 的單機問題裡，不論怎麼排，$C_{\max}$ 都是 15？</summary>
+        <div class="answer">
+          <p class="box-title">解答</p>
+          <p>單機而且所有工件一開始就能做時，機器不會閒置，最後一個工件做完的時間一定等於全部處理時間的總和 $4 + 2 + 6 + 3 = 15$。所以單機問題通常不拿 $C_{\max}$ 當目標，而是看 $\sum C_j$、$L_{\max}$ 這類和順序有關的指標。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="references">
+      <h2>延伸閱讀</h2>
+      <ul class="refs">
+        <li>M. L. Pinedo, <cite>Scheduling: Theory, Algorithms, and Systems</cite>, Springer, Chapter 3（單機）與 Chapter 6（流程工廠）.</li>
+        <li>S. M. Johnson, “Optimal two- and three-stage production schedules with setup times included,” <cite>Naval Research Logistics Quarterly</cite>, 1(1), 61–68, 1954.</li>
+        <li>R. L. Graham, E. L. Lawler, J. K. Lenstra, and A. H. G. Rinnooy Kan, “Optimization and approximation in deterministic sequencing and scheduling: a survey,” <cite>Annals of Discrete Mathematics</cite>, 5, 287–326, 1979.</li>
+      </ul>
+    </section>
+
+  </article>
+</body>
+</html>

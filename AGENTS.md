@@ -253,6 +253,7 @@ ie-optimization-notes/
 | 寬鬆變數 | $s_i$ |
 | 大 M | $M$ |
 | 排程：處理時間、交期、完工時間 | $p_j$、$d_j$、$C_j$；最大完工時間 $C_{\max}$；延遲 $L_j = C_j - d_j$ |
+| 多台機器的處理時間 | $p_{kj}$：工件 $j$ 在機器 $k$ 的處理時間 |
 
 - 模型一律用 `\begin{aligned} \max \quad & … \\ \text{s.t.} \quad & … \end{aligned}` 排版，最大化／最小化寫 `\max`、`\min`。
 - 小於、大於寫 `\le`、`\ge`、`\lt`、`\gt`，不要在 HTML 裡直接打 `<`。
